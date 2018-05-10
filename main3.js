@@ -1,14 +1,22 @@
 // Graphics global variables
 var camera, scene, renderer;
 var gridRegions = []; // regions of space that do stuff
-var gridCount = 6; // number of local regions
-var gridSize = 40; // sidelength of region cube
-var gridDensity = 10; // number of objects per region
+var gridCount = 3;   // region partitions per side
+var gridSize = 40;   // sidelength of region cube
+var gridDensity = 100;  // number of objects per region
+
+var objectsToGenerate = []; // a queue for objects to be created
+var maxGenerationsPerFrame = 100; // max number of objects to be generated per frame
+
+var objectsToRemove = []; // a queue for objects to be removed
+var maxRemovalsPerFrame = 100; // max number of objects to be removed per frame
+
+var stats; // fps counter
 
 var geometry = new THREE.BoxGeometry(1, 1, 1);
 var material = new THREE.MeshNormalMaterial();
 
-var SPEED = 6;
+var SPEED = 100;
 
 // time variables
 var clock = new THREE.Clock();
@@ -27,8 +35,8 @@ function init() {
 }
 
 function animate() {
-  requestAnimationFrame(animate);
   render();
+  requestAnimationFrame(animate);
 }
 
 
@@ -45,6 +53,11 @@ function initGraphics() {
   renderer = new THREE.WebGLRenderer();
   renderer.setSize(window.innerWidth, window.innerHeight);
   document.body.appendChild(renderer.domElement);
+  
+  stats = new Stats();
+  stats.domElement.style.position = 'absolute';
+  stats.domElement.style.top = '0px';
+  document.body.appendChild( stats.domElement );
 }
 
 function initObjects() {  
@@ -57,12 +70,20 @@ function initObjects() {
   for (var x = gridX - halfGridCount; x < gridX + halfGridCount + 1; x++) {
     for (var y = gridY - halfGridCount; y < gridY + halfGridCount + 1; y++) {
       for (var z = gridZ - halfGridCount; z < gridZ + halfGridCount + 1; z++) {
+        
         gridRegions[gridIndex(x, y, z)] = {
           x: x,
           y: y,
           z: z,
-          objects: createObjects(x, y, z)
+          objects: []
         };
+        
+        objectsToGenerate.push({
+          x: x,
+          y: y,
+          z: z,
+          count: gridDensity
+        });
       }
     }
   }
@@ -77,21 +98,53 @@ function gridIndex(x, y, z) {
   return i;
 }
 
-function createObjects(x, y, z) {
-  var objects = [];
-  for (var i = 0; i < gridDensity; i++) {
+function generateObjects() {
+  
+  if (objectsToGenerate.length <= 0) return;
+  
+  var entry = objectsToGenerate[0];
+  var x = entry.x;
+  var y = entry.y;
+  var z = entry.z;
+  var gridRegion = gridRegions[gridIndex(x, y, z)];
+  
+  var count = 0;
+  while (count < maxGenerationsPerFrame) {
+    
+    // go to next entry if no more
+    if (entry.count <= 0) {
+      
+      objectsToGenerate.shift();
+      if (objectsToGenerate.length <= 0) return;
+      
+      entry = objectsToGenerate[0];
+      x = entry.x;
+      y = entry.y;
+      z = entry.z;
+      gridRegion = gridRegions[gridIndex(x, y, z)];
+      continue;
+    }
+    
     var cube = new THREE.Mesh(geometry, material);
     cube.position.set(
       x*gridSize + (Math.random() - 0.5)*gridSize,
       y*gridSize + (Math.random() - 0.5)*gridSize,
       z*gridSize + (Math.random() - 0.5)*gridSize,
-    )
+    );
     
     scene.add(cube);
-    objects.push(cube);
+    gridRegion.objects.push(cube);
+    entry.count--;
+    count++;
   }
-  
-  return objects;
+}
+
+function removeObjects() {
+  var count = 0;
+  while (count < maxRemovalsPerFrame && objectsToRemove.length > 0) {
+    scene.remove(objectsToRemove.shift());
+    count++;
+  }
 }
 
 // updates view
@@ -100,6 +153,8 @@ function render() {
   updatePhysics(deltaTime);
   renderer.render(scene, camera);
   time += deltaTime;
+  
+  stats.update();
 }
 
 function updatePhysics(deltaTime) {
@@ -126,17 +181,27 @@ function updateObjects() {
           
           // remove old region
           for (var i = 0; i < gridRegion.objects.length; i++) {
-            scene.remove(gridRegion.objects[i]);
+            objectsToRemove.push(gridRegion.objects[i]);
           }
           
           gridRegions[gridIndex(x, y, z)] = {
             x: x,
             y: y,
             z: z,
-            objects: createObjects(x, y, z)
+            objects: []
           };
+          
+          objectsToGenerate.push({
+            x: x,
+            y: y,
+            z: z,
+            count: gridDensity
+          });
         }
       }
     }
   }
+
+  generateObjects();
+  removeObjects();
 }
