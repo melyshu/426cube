@@ -15,10 +15,16 @@ var objectsToRemove = []; // a queue for objects to be removed
 var maxRemovalsPerFrame = 150; // max number of objects to be removed per frame
 
 // BEGIN misc sandbox global variables
-var geometry = new THREE.BoxGeometry(1, 1, 1);
-var material = new THREE.MeshNormalMaterial();
+var geometry = new THREE.CubeGeometry(1, 1, 1);
+var materials = []
+for (var i = 0; i < 5; i++) {
+  var c = Math.floor(0xffffff*(Math.random() + 1)/2);
+  materials.push(new THREE.MeshPhongMaterial({ color: c }));
+}
 
-var SPEED = 30;
+var light;
+
+var SPEED = 15;
 
 var controls; // @ALICE: temporary navigation for now
 
@@ -54,7 +60,7 @@ function initGraphics() {
   scene = new THREE.Scene();
   
   var ambientLight = new THREE.AmbientLight( 0x707070 );
-  scene.add( ambientLight );
+  //scene.add( ambientLight );
   
   renderer = new THREE.WebGLRenderer();
   renderer.setSize(window.innerWidth, window.innerHeight);
@@ -69,6 +75,10 @@ function initGraphics() {
   controls = new THREE.FirstPersonControls( camera );
   controls.movementSpeed = SPEED;
   controls.lookSpeed = 0.1;
+  
+  light = new THREE.PointLight(0xffffff, 1, 50, 2);
+  light.position.set(0, 0, 0);
+  scene.add(light);
 }
 
 // initialize grid
@@ -118,6 +128,7 @@ function updateObjects(deltaTime) {
 function updateCamera(deltaTime) {
   // @ALICE: something?
   controls.update(deltaTime);
+  light.position.set(camera.position.x, camera.position.y, camera.position.z);
   //camera.position.z -= SPEED*deltaTime;
 }
 
@@ -182,6 +193,8 @@ function generateObjects(deltaTime) {
     }
     
     // generate random cube
+    var index = Math.floor(materials.length*Math.random());
+    var material = materials[index];
     var cube = new THREE.Mesh(geometry, material);
     cube.position.set(
       x*gridSize + (Math.random() - 0.5)*gridSize,
