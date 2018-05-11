@@ -13,11 +13,11 @@ THREE.FirstPersonControls = function ( camera ) {
 
 	camera.rotation.set( 0, 0, 0 );
 
-	var pitchObject = new THREE.Object3D();
-	pitchObject.add( camera );
+	// var pitchObject = new THREE.Object3D();
+	// pitchObject.add( camera );
 
 	var yawObject = new THREE.Object3D();
-	yawObject.position.y = 10;
+	yawObject.position.y = 0;
 	yawObject.add( pitchObject );
 
 	var PI_2 = Math.PI / 2;
@@ -27,10 +27,10 @@ THREE.FirstPersonControls = function ( camera ) {
 		var movementX = event.movementX || event.mozMovementX || event.webkitMovementX || 0;
 		var movementY = event.movementY || event.mozMovementY || event.webkitMovementY || 0;
 
-		yawObject.rotation.y -= movementX * 0.002;
-		pitchObject.rotation.x -= movementY * 0.002;
+		// yawObject.rotation.y -= movementX * 0.002;
+		// pitchObject.rotation.x -= movementY * 0.002;
 
-		pitchObject.rotation.x = Math.max( - PI_2, Math.min( PI_2, pitchObject.rotation.x ) );
+		// pitchObject.rotation.x = Math.max( - PI_2, Math.min( PI_2, pitchObject.rotation.x ) );
 
 	};
 
@@ -92,36 +92,36 @@ THREE.FirstPersonControls = function ( camera ) {
 	document.addEventListener( 'keydown', onKeyDown, false );
 	document.addEventListener( 'keyup', onKeyUp, false );
 
-	var havePointerLock = 'pointerLockElement' in document ||
-	 											'mozPointerLockElement' in document ||
-	  										'webkitPointerLockElement' in document;
+	// var havePointerLock = 'pointerLockElement' in document ||
+	 											// 'mozPointerLockElement' in document ||
+	  										// 'webkitPointerLockElement' in document;
 
-			if ( havePointerLock ) {
-				var element = document.body;
-				var pointerlockchange = function ( event ) {
-					if ( document.pointerLockElement === element ||
-						 	 document.mozPointerLockElement === element ||
-							 document.webkitPointerLockElement === element ) {
+			// if ( havePointerLock ) {
+				// var element = document.body;
+				// var pointerlockchange = function ( event ) {
+					// if ( document.pointerLockElement === element ||
+						 	 // document.mozPointerLockElement === element ||
+							 // document.webkitPointerLockElement === element ) {
 						scope.controlsEnabled = true;
-						document.addEventListener( 'mousemove', onMouseMove, false );
-					} else {
-						scope.controlsEnabled = false;
-					}
-				};
-				var pointerlockerror = function ( event ) {
-					//There was an error
-				};
-				// Hook pointer lock state change events
-				document.addEventListener( 'pointerlockchange', pointerlockchange, false );
-				document.addEventListener( 'mozpointerlockchange', pointerlockchange, false );
-				document.addEventListener( 'webkitpointerlockchange', pointerlockchange, false );
-				document.addEventListener( 'pointerlockerror', pointerlockerror, false );
-				document.addEventListener( 'mozpointerlockerror', pointerlockerror, false );
-				document.addEventListener( 'webkitpointerlockerror', pointerlockerror, false );
+						// document.addEventListener( 'mousemove', onMouseMove, false );
+					// } else {
+						// scope.controlsEnabled = false;
+					// }
+				// };
+				// var pointerlockerror = function ( event ) {
+					// //There was an error
+				// };
+				// // Hook pointer lock state change events
+				// document.addEventListener( 'pointerlockchange', pointerlockchange, false );
+				// document.addEventListener( 'mozpointerlockchange', pointerlockchange, false );
+				// document.addEventListener( 'webkitpointerlockchange', pointerlockchange, false );
+				// document.addEventListener( 'pointerlockerror', pointerlockerror, false );
+				// document.addEventListener( 'mozpointerlockerror', pointerlockerror, false );
+				// document.addEventListener( 'webkitpointerlockerror', pointerlockerror, false );
 
-			} else {
-				document.body.innerHTML = 'Your browser doesn\'t seem to support Pointer Lock API';
-			}
+			// } else {
+				// document.body.innerHTML = 'Your browser doesn\'t seem to support Pointer Lock API';
+			// }
 
 	this.getDirection = function() {
 
@@ -145,10 +145,10 @@ THREE.FirstPersonControls = function ( camera ) {
 	//var newDiv = document.createElement("div");
 	//newDiv.innerHTML = "Click to play";
 	//document.body.appendChild (newDiv);
-	document.body.addEventListener("click", function() {
-		var element = document.body;
-		element.requestPointerLock = element.requestPointerLock || element.mozRequestPointerLock || element.webkitRequestPointerLock;
-		element.requestPointerLock();
-	});
+	// document.body.addEventListener("click", function() {
+		// var element = document.body;
+		// element.requestPointerLock = element.requestPointerLock || element.mozRequestPointerLock || element.webkitRequestPointerLock;
+		// element.requestPointerLock();
+	// });
 
 };
