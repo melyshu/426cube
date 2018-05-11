@@ -5,22 +5,22 @@ var stats; // fps counter
 // Grid global variables
 var gridRegions = []; // regions of space that do stuff
 var gridCount = 5;   // region partitions per side
-var gridSize = 20;   // sidelength of region cube
-var gridDensity = 70;  // number of objects per region
+var gridSize = 15;   // sidelength of region cube
+var gridDensity = 55;  // number of objects per region
 
 var objectsToGenerate = []; // a queue for objects to be created
-var maxGenerationsPerFrame = 50; // max number of objects to be generated per frame
+var maxGenerationsPerFrame = 150; // max number of objects to be generated per frame
 
 var objectsToRemove = []; // a queue for objects to be removed
-var maxRemovalsPerFrame = 100; // max number of objects to be removed per frame
+var maxRemovalsPerFrame = 150; // max number of objects to be removed per frame
 
 // BEGIN misc sandbox global variables
 var geometry = new THREE.BoxGeometry(1, 1, 1);
 var material = new THREE.MeshNormalMaterial();
 
-var SPEED = 10;
+var SPEED = 30;
 
-var controls; // temporary navigation
+var controls; // @ALICE: temporary navigation for now
 
 // END misc sandbox global variables
 
@@ -65,6 +65,7 @@ function initGraphics() {
   stats.domElement.style.top = '0px';
   document.body.appendChild( stats.domElement );
   
+  // @ALICE: these can be replaced
   controls = new THREE.FirstPersonControls( camera );
   controls.movementSpeed = SPEED;
   controls.lookSpeed = 0.1;
@@ -115,6 +116,7 @@ function updateObjects(deltaTime) {
 
 // moves the location of the camera
 function updateCamera(deltaTime) {
+  // @ALICE: something?
   controls.update(deltaTime);
   //camera.position.z -= SPEED*deltaTime;
 }
@@ -130,15 +132,30 @@ function gridIndex(x, y, z) {
   return i;
 }
 
+// returns whether this gridRegion index is still near the camera
+function gridIsValid(x, y, z) {
+  var gridX = Math.round(camera.position.x/gridSize);
+  var gridY = Math.round(camera.position.y/gridSize);
+  var gridZ = Math.round(camera.position.z/gridSize);
+  var halfGridCount = Math.floor(gridCount/2);
+  
+  return !(
+    x < gridX - halfGridCount || gridX + halfGridCount < x ||
+    y < gridY - halfGridCount || gridY + halfGridCount < y ||
+    z < gridZ - halfGridCount || gridZ + halfGridCount < z
+  );
+}
+
 // creates some objects from objectsToGenerate
 function generateObjects(deltaTime) {
   
   if (objectsToGenerate.length <= 0) return;
   
-  var entry = objectsToGenerate[0];
-  var x = entry.x;
-  var y = entry.y;
-  var z = entry.z;
+  objectsToGenerate.unshift({ count: 0 });
+  var entry = { count: 0 };
+  var x = NaN;
+  var y = NaN;
+  var z = NaN;
   var gridRegion = gridRegions[gridIndex(x, y, z)];
   
   var count = 0;
@@ -150,10 +167,13 @@ function generateObjects(deltaTime) {
     // go to next entry if no more
     if (entry.count <= 0) {
       
-      objectsToGenerate.shift();
-      if (objectsToGenerate.length <= 0) return;
+      // discard entries that are no longer relevant
+      do {
+        objectsToGenerate.shift();
+        if (objectsToGenerate.length <= 0) return;
+        entry = objectsToGenerate[0];
+      } while (!gridIsValid(entry.x, entry.y, entry.z));
       
-      entry = objectsToGenerate[0];
       x = entry.x;
       y = entry.y;
       z = entry.z;
@@ -209,13 +229,7 @@ function updateGridRegions(gridX, gridY, gridZ) {
     var qZ = queueXYZ.z;
     
     // ignore if out of bounds
-    if (
-      qX < gridX - halfGridCount || gridX + halfGridCount < qX ||
-      qY < gridY - halfGridCount || gridY + halfGridCount < qY ||
-      qZ < gridZ - halfGridCount || gridZ + halfGridCount < qZ
-    ) {
-      continue;
-    }
+    if (!gridIsValid(qX, qY, qZ)) continue;
     
     // update if necessary
     var gridRegion = gridRegions[gridIndex(qX, qY, qZ)];
