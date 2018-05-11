@@ -19,7 +19,7 @@ var player = {
   position: new THREE.Vector3(0, 0, 0),
   velocity: new THREE.Vector3(0, 0, 10),
   up: new THREE.Vector3(0, 1, 0),
-  object: new THREE.Mesh(new THREE.CubeGeometry(0.5, 0.5, 0.5), new THREE.MeshNormalMaterial())
+  object: new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshNormalMaterial())
 };
 var playerRotationRate = 0.03;
 
@@ -128,21 +128,17 @@ function updateObjects(deltaTime) {
   updateGridRegions(gridX, gridY, gridZ);
   generateObjects(deltaTime);
   removeObjects(deltaTime);
-  
+
   light.position.set(player.object.position.x, player.object.position.y, player.object.position.z);
 }
 
 // moves the location of the camera
 function updateCamera(deltaTime) {
-  
+
   var pos = player.object.position.clone().sub(player.velocity.clone().normalize().multiplyScalar(3.0)).addScaledVector(player.up, 2);
   camera.up.set(player.up.x, player.up.y, player.up.z);
   camera.position.set(pos.x, pos.y, pos.z);
   camera.lookAt(player.object.position);
-  //camera.
-  // @ALICE: something?
-  // controls.update(deltaTime);
-  //camera.position.z -= SPEED*deltaTime;
 }
 
 // returns the positive remainder of n divided by k
@@ -295,7 +291,7 @@ function updateGridRegions(gridX, gridY, gridZ) {
 
 // update the position and velocity of the player
 function updatePlayer(deltaTime) {
-  
+
   if (controls.moveUp) {
     var newVelocity = player.velocity.clone().normalize();
     var right = newVelocity.clone().cross(player.up);
@@ -304,6 +300,7 @@ function updatePlayer(deltaTime) {
     player.velocity = newVelocity;
     var newUp = right.clone().cross(newVelocity).normalize();
     player.up = newUp;
+    player.object.lookAt(camera.position.clone().addScaledVector(player.up, -2));
   }
   if (controls.moveDown) {
     var newVelocity = player.velocity.clone().normalize();
@@ -313,6 +310,7 @@ function updatePlayer(deltaTime) {
     player.velocity = newVelocity;
     var newUp = right.clone().cross(newVelocity).normalize();
     player.up = newUp;
+    player.object.lookAt(camera.position.clone().addScaledVector(player.up, +2));
   }
   if (controls.moveRight) {
     var newVelocity = player.velocity.clone().normalize();
@@ -320,6 +318,7 @@ function updatePlayer(deltaTime) {
     newVelocity.addScaledVector(right, playerRotationRate).normalize();
     newVelocity.multiplyScalar(player.velocity.length());
     player.velocity = newVelocity;
+    player.object.lookAt(camera.position.clone().addScaledVector(player.up, -2));
   }
   if (controls.moveLeft) {
     var newVelocity = player.velocity.clone().normalize();
@@ -327,13 +326,13 @@ function updatePlayer(deltaTime) {
     newVelocity.addScaledVector(right, -playerRotationRate).normalize();
     newVelocity.multiplyScalar(player.velocity.length());
     player.velocity = newVelocity;
+    player.object.lookAt(camera.position.clone().addScaledVector(player.up, -2));
   }
-  
-  
+
   // Update the position using the changed delta
   player.object.position.addScaledVector(player.velocity, deltaTime);
-  
+
   // make the player look at the camera
   player.object.up = player.up;
-  player.object.lookAt(camera.position.clone().addScaledVector(player.up, -2));
+  // player.object.lookAt(camera.position.clone().addScaledVector(player.up, -2));
 }
