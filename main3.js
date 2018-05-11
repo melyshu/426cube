@@ -27,6 +27,8 @@ var light;
 var SPEED = 15;
 
 var controls; // @ALICE: temporary navigation for now
+var prevTime = performance.now();
+var velocity = new THREE.Vector3();
 
 // END misc sandbox global variables
 
@@ -49,6 +51,8 @@ function init() {
 function animate() {
   render();
   requestAnimationFrame(animate);
+  // Check the FirstPersonControls object and update velocity accordingly
+	playerControls();
 }
 
 
@@ -56,26 +60,28 @@ function animate() {
 function initGraphics() {
   camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
   camera.position.set(0, 0, 0);
-  
+
   scene = new THREE.Scene();
-  
+
   var ambientLight = new THREE.AmbientLight( 0x707070 );
   //scene.add( ambientLight );
-  
+
   renderer = new THREE.WebGLRenderer();
   renderer.setSize(window.innerWidth, window.innerHeight);
   document.body.appendChild(renderer.domElement);
-  
+
   stats = new Stats();
   stats.domElement.style.position = 'absolute';
   stats.domElement.style.top = '0px';
   document.body.appendChild( stats.domElement );
-  
+
   // @ALICE: these can be replaced
   controls = new THREE.FirstPersonControls( camera );
-  controls.movementSpeed = SPEED;
-  controls.lookSpeed = 0.1;
-  
+	scene.add( controls.getObject() );
+  // controls = new THREE.FirstPersonControls( camera );
+  // controls.movementSpeed = SPEED;
+  // controls.lookSpeed = 0.1;
+
   light = new THREE.PointLight(0xffffff, 1, 50, 2);
   light.position.set(0, 0, 0);
   scene.add(light);
@@ -99,16 +105,16 @@ function initGrid() {
 
 // updates view
 function render() {
-  
+
   // update time
   var deltaTime = clock.getDelta();
   time += deltaTime;
-  
+
   // update scene
   updateObjects(deltaTime);
   updateCamera(deltaTime);
   stats.update();
-  
+
   // render!
   renderer.render(scene, camera);
 }
@@ -118,7 +124,7 @@ function updateObjects(deltaTime) {
   var gridX = Math.round(camera.position.x/gridSize);
   var gridY = Math.round(camera.position.y/gridSize);
   var gridZ = Math.round(camera.position.z/gridSize);
-  
+
   updateGridRegions(gridX, gridY, gridZ);
   generateObjects(deltaTime);
   removeObjects(deltaTime);
@@ -127,7 +133,7 @@ function updateObjects(deltaTime) {
 // moves the location of the camera
 function updateCamera(deltaTime) {
   // @ALICE: something?
-  controls.update(deltaTime);
+  // controls.update(deltaTime);
   light.position.set(camera.position.x, camera.position.y, camera.position.z);
   //camera.position.z -= SPEED*deltaTime;
 }
@@ -149,7 +155,7 @@ function gridIsValid(x, y, z) {
   var gridY = Math.round(camera.position.y/gridSize);
   var gridZ = Math.round(camera.position.z/gridSize);
   var halfGridCount = Math.floor(gridCount/2);
-  
+
   return !(
     x < gridX - halfGridCount || gridX + halfGridCount < x ||
     y < gridY - halfGridCount || gridY + halfGridCount < y ||
@@ -159,39 +165,39 @@ function gridIsValid(x, y, z) {
 
 // creates some objects from objectsToGenerate
 function generateObjects(deltaTime) {
-  
+
   if (objectsToGenerate.length <= 0) return;
-  
+
   objectsToGenerate.unshift({ count: 0 });
   var entry = { count: 0 };
   var x = NaN;
   var y = NaN;
   var z = NaN;
   var gridRegion = gridRegions[gridIndex(x, y, z)];
-  
+
   var count = 0;
   var maxToUpdate = gridCount*gridCount*gridDensity;
   var progressToUpdate = deltaTime*SPEED/gridSize;
   var total = maxGenerationsPerFrame; // Math.max(maxToUpdate*progressToUpdate*1.1, maxGenerationsPerFrame); // tried dynamically adjusting to speed
   while (count < total) {
-    
+
     // go to next entry if no more
     if (entry.count <= 0) {
-      
+
       // discard entries that are no longer relevant
       do {
         objectsToGenerate.shift();
         if (objectsToGenerate.length <= 0) return;
         entry = objectsToGenerate[0];
       } while (!gridIsValid(entry.x, entry.y, entry.z));
-      
+
       x = entry.x;
       y = entry.y;
       z = entry.z;
       gridRegion = gridRegions[gridIndex(x, y, z)];
       continue;
     }
-    
+
     // generate random cube
     var index = Math.floor(materials.length*Math.random());
     var material = materials[index];
@@ -201,7 +207,7 @@ function generateObjects(deltaTime) {
       y*gridSize + (Math.random() - 0.5)*gridSize,
       z*gridSize + (Math.random() - 0.5)*gridSize,
     );
-    
+
     // update
     scene.add(cube);
     gridRegion.objects.push(cube);
@@ -224,7 +230,7 @@ function removeObjects(deltaTime) {
 
 // updates the grid given the current grid indices
 function updateGridRegions(gridX, gridY, gridZ) {
-  
+
   // initialize queue
   var halfGridCount = Math.floor(gridCount/2);
   var queue = [{ x: gridX, y: gridY, z: gridZ }];
@@ -234,25 +240,25 @@ function updateGridRegions(gridX, gridY, gridZ) {
   queue.push({ x: gridX, y: gridY-halfGridCount, z: gridZ });
   queue.push({ x: gridX, y: gridY, z: gridZ+halfGridCount });
   queue.push({ x: gridX, y: gridY, z: gridZ-halfGridCount });
-  
+
   while (queue.length > 0) {
     var queueXYZ = queue.shift();
     var qX = queueXYZ.x;
     var qY = queueXYZ.y;
     var qZ = queueXYZ.z;
-    
+
     // ignore if out of bounds
     if (!gridIsValid(qX, qY, qZ)) continue;
-    
+
     // update if necessary
     var gridRegion = gridRegions[gridIndex(qX, qY, qZ)];
     if (gridRegion.x !== qX || gridRegion.y !== qY || gridRegion.z !== qZ) {
-      
+
       // remove old region
       for (var i = 0; i < gridRegion.objects.length; i++) {
         objectsToRemove.push(gridRegion.objects[i]);
       }
-      
+
       // create new region
       gridRegions[gridIndex(qX, qY, qZ)] = {
         x: qX,
@@ -260,7 +266,7 @@ function updateGridRegions(gridX, gridY, gridZ) {
         z: qZ,
         objects: []
       };
-      
+
       // send generation request
       objectsToGenerate.push({
         x: qX,
@@ -268,7 +274,7 @@ function updateGridRegions(gridX, gridY, gridZ) {
         z: qZ,
         count: gridDensity
       });
-      
+
       // search neighbors
       queue.push({ x: qX+1, y: qY  , z: qZ   });
       queue.push({ x: qX-1, y: qY  , z: qZ   });
@@ -280,3 +286,41 @@ function updateGridRegions(gridX, gridY, gridZ) {
   }
 }
 
+function playerControls () {
+	// Are the controls enabled? (Does the browser have pointer lock?)
+	if ( controls.controlsEnabled ) {
+		// Save the current time
+		var time = performance.now();
+		// Create a delta value based on current time
+		var delta = ( time - prevTime ) / 1000;
+		// Set the velocity.x and velocity.z using the calculated time delta
+		velocity.x -= velocity.x * 10.0 * delta;
+		velocity.z -= velocity.z * 10.0 * delta;
+		// As velocity.y is our "gravity," calculate delta
+		velocity.y -= 9.8 * 100.0 * delta; // 100.0 = mass
+		var speed = 400.0 * delta;
+		if ( controls.moveForward ) {
+			velocity.z -= speed;
+		}
+		if ( controls.moveBackward ) {
+			velocity.z += speed;
+		}
+		if ( controls.moveLeft ) {
+			velocity.x -= speed;
+		}
+		if ( controls.moveRight ) {
+			velocity.x += speed;
+		}
+		// Update the position using the changed delta
+		camera.translateX( velocity.x * delta );
+		// camera.translateY( velociaty.y * delta );
+		camera.translateZ( velocity.z * delta );
+		// Prevent the camera/player from falling out of the 'world'
+		// if ( controls.getObject().position.y < 10 ) {
+		// 	velocity.y = 0;
+		// 	controls.getObject().position.y = 10;
+		// }
+		// Save the time for future delta calculations
+		prevTime = time;
+	}
+}
