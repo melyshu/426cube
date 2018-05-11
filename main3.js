@@ -82,7 +82,7 @@ function initGraphics() {
   light = new THREE.PointLight(0xffffff, 1, 50, 2);
   light.position.set(0, 0, 0);
   scene.add(light);
-  
+
   scene.add(player.object);
 }
 
@@ -295,13 +295,6 @@ function updateGridRegions(gridX, gridY, gridZ) {
 
 // update the position and velocity of the player
 function updatePlayer(deltaTime) {
-  /*
-  // Set the velocity.x and velocity.z using the calculated time delta
-  velocity.x -= velocity.x * 10.0 * delta;
-  velocity.z -= velocity.z * 10.0 * delta;
-  // As velocity.y is our "gravity," calculate delta
-  //velocity.y -= 9.8 * 100.0 * delta; // 100.0 = mass
-  var speed = 400.0 * delta;*/
   
   if (controls.moveUp) {
     var newVelocity = player.velocity.clone().normalize();
@@ -343,16 +336,4 @@ function updatePlayer(deltaTime) {
   // make the player look at the camera
   player.object.up = player.up;
   player.object.lookAt(camera.position.clone().addScaledVector(player.up, -2));
-  
-  //camera.translateX( velocity.x * delta );
-  // camera.translateY( velociaty.y * delta );
-  //camera.translateZ( velocity.z * delta );
-  // Prevent the camera/player from falling out of the 'world'
-  // if ( controls.getObject().position.y < 10 ) {
-  // 	velocity.y = 0;
-  // 	controls.getObject().position.y = 10;
-  // }
-  // Save the time for future delta calculations
-  prevTime = time;
-
 }

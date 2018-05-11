@@ -16,9 +16,9 @@ THREE.FirstPersonControls = function ( camera ) {
 	// var pitchObject = new THREE.Object3D();
 	// pitchObject.add( camera );
 
-	// var yawObject = new THREE.Object3D();
-	// yawObject.position.y = 10;
-	// yawObject.add( pitchObject );
+	var yawObject = new THREE.Object3D();
+	yawObject.position.y = 0;
+	yawObject.add( pitchObject );
 
 	var PI_2 = Math.PI / 2;
 
