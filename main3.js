@@ -297,7 +297,7 @@ function playerControls () {
 		velocity.x -= velocity.x * 10.0 * delta;
 		velocity.z -= velocity.z * 10.0 * delta;
 		// As velocity.y is our "gravity," calculate delta
-		velocity.y -= 9.8 * 100.0 * delta; // 100.0 = mass
+		// velocity.y -= 9.8 * 100.0 * delta; // 100.0 = mass
 		var speed = 400.0 * delta;
 		if ( controls.moveForward ) {
 			velocity.z -= speed;
