@@ -14,6 +14,13 @@ var maxGenerationsPerFrame = 150; // max number of objects to be generated per f
 var objectsToRemove = []; // a queue for objects to be removed
 var maxRemovalsPerFrame = 150; // max number of objects to be removed per frame
 
+var player = {
+  position: new THREE.Vector3(0, 0, 0),
+  forwards: new THREE.Vector3(0, 0, 1),
+  up: new THREE.Vector3(0, 1, 0),
+  object: new THREE.Mesh(new THREE.SphereGeometry(0.5), new THREE.MeshNormalMaterial())
+};
+
 // BEGIN misc sandbox global variables
 var geometry = new THREE.CubeGeometry(1, 1, 1);
 var materials = []
@@ -49,12 +56,11 @@ function init() {
 }
 
 function animate() {
+	playerControls();
   render();
   requestAnimationFrame(animate);
   // Check the FirstPersonControls object and update velocity accordingly
-	playerControls();
 }
-
 
 // initializes graphics variables
 function initGraphics() {
@@ -85,6 +91,8 @@ function initGraphics() {
   light = new THREE.PointLight(0xffffff, 1, 50, 2);
   light.position.set(0, 0, 0);
   scene.add(light);
+
+  scene.add(player.object);
 }
 
 // initialize grid
@@ -297,7 +305,7 @@ function playerControls () {
 		velocity.x -= velocity.x * 10.0 * delta;
 		velocity.z -= velocity.z * 10.0 * delta;
 		// As velocity.y is our "gravity," calculate delta
-		// velocity.y -= 9.8 * 100.0 * delta; // 100.0 = mass
+		//velocity.y -= 9.8 * 100.0 * delta; // 100.0 = mass
 		var speed = 400.0 * delta;
 		if ( controls.moveForward ) {
 			velocity.z -= speed;
@@ -312,9 +320,13 @@ function playerControls () {
 			velocity.x += speed;
 		}
 		// Update the position using the changed delta
-		camera.translateX( velocity.x * delta );
+    player.object.position.x += velocity.x * delta;
+    player.object.position.y += velocity.y * delta;
+    player.object.position.z += velocity.z * delta;
+
+		//camera.translateX( velocity.x * delta );
 		// camera.translateY( velociaty.y * delta );
-		camera.translateZ( velocity.z * delta );
+		//camera.translateZ( velocity.z * delta );
 		// Prevent the camera/player from falling out of the 'world'
 		// if ( controls.getObject().position.y < 10 ) {
 		// 	velocity.y = 0;
