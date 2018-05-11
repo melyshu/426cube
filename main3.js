@@ -1,8 +1,8 @@
-// Graphics global variables
-var camera, scene, renderer;
+// graphics global variables
+var camera, scene, renderer, controls;
 var stats; // fps counter
 
-// Grid global variables
+// grid global variables
 var gridRegions = []; // regions of space that do stuff
 var gridCount = 5;   // region partitions per side
 var gridSize = 15;   // sidelength of region cube
@@ -14,12 +14,14 @@ var maxGenerationsPerFrame = 150; // max number of objects to be generated per f
 var objectsToRemove = []; // a queue for objects to be removed
 var maxRemovalsPerFrame = 150; // max number of objects to be removed per frame
 
+// player global variables
 var player = {
   position: new THREE.Vector3(0, 0, 0),
-  forwards: new THREE.Vector3(0, 0, 1),
+  velocity: new THREE.Vector3(0, 0, 10),
   up: new THREE.Vector3(0, 1, 0),
-  object: new THREE.Mesh(new THREE.SphereGeometry(0.5), new THREE.MeshNormalMaterial())
+  object: new THREE.Mesh(new THREE.CubeGeometry(0.5, 0.5, 0.5), new THREE.MeshNormalMaterial())
 };
+var playerRotationRate = 0.03;
 
 // BEGIN misc sandbox global variables
 var geometry = new THREE.CubeGeometry(1, 1, 1);
@@ -32,10 +34,6 @@ for (var i = 0; i < 5; i++) {
 var light;
 
 var SPEED = 15;
-
-var controls; // @ALICE: temporary navigation for now
-var prevTime = performance.now();
-var velocity = new THREE.Vector3();
 
 // END misc sandbox global variables
 
@@ -56,10 +54,8 @@ function init() {
 }
 
 function animate() {
-	playerControls();
   render();
   requestAnimationFrame(animate);
-  // Check the FirstPersonControls object and update velocity accordingly
 }
 
 // initializes graphics variables
@@ -81,12 +77,7 @@ function initGraphics() {
   stats.domElement.style.top = '0px';
   document.body.appendChild( stats.domElement );
 
-  // @ALICE: these can be replaced
-  controls = new THREE.FirstPersonControls( camera );
-	scene.add( controls.getObject() );
-  // controls = new THREE.FirstPersonControls( camera );
-  // controls.movementSpeed = SPEED;
-  // controls.lookSpeed = 0.1;
+  controls = new THREE.PlayerControls();
 
   light = new THREE.PointLight(0xffffff, 1, 50, 2);
   light.position.set(0, 0, 0);
@@ -120,6 +111,7 @@ function render() {
 
   // update scene
   updateObjects(deltaTime);
+  updatePlayer(deltaTime);
   updateCamera(deltaTime);
   stats.update();
 
@@ -129,20 +121,27 @@ function render() {
 
 // generates and deletes objects as required
 function updateObjects(deltaTime) {
-  var gridX = Math.round(camera.position.x/gridSize);
-  var gridY = Math.round(camera.position.y/gridSize);
-  var gridZ = Math.round(camera.position.z/gridSize);
+  var gridX = Math.round(player.object.position.x/gridSize);
+  var gridY = Math.round(player.object.position.y/gridSize);
+  var gridZ = Math.round(player.object.position.z/gridSize);
 
   updateGridRegions(gridX, gridY, gridZ);
   generateObjects(deltaTime);
   removeObjects(deltaTime);
+  
+  light.position.set(player.object.position.x, player.object.position.y, player.object.position.z);
 }
 
 // moves the location of the camera
 function updateCamera(deltaTime) {
+  
+  var pos = player.object.position.clone().sub(player.velocity.clone().normalize().multiplyScalar(3.0)).addScaledVector(player.up, 2);
+  camera.up.set(player.up.x, player.up.y, player.up.z);
+  camera.position.set(pos.x, pos.y, pos.z);
+  camera.lookAt(player.object.position);
+  //camera.
   // @ALICE: something?
   // controls.update(deltaTime);
-  light.position.set(camera.position.x, camera.position.y, camera.position.z);
   //camera.position.z -= SPEED*deltaTime;
 }
 
@@ -159,9 +158,9 @@ function gridIndex(x, y, z) {
 
 // returns whether this gridRegion index is still near the camera
 function gridIsValid(x, y, z) {
-  var gridX = Math.round(camera.position.x/gridSize);
-  var gridY = Math.round(camera.position.y/gridSize);
-  var gridZ = Math.round(camera.position.z/gridSize);
+  var gridX = Math.round(player.object.position.x/gridSize);
+  var gridY = Math.round(player.object.position.y/gridSize);
+  var gridZ = Math.round(player.object.position.z/gridSize);
   var halfGridCount = Math.floor(gridCount/2);
 
   return !(
@@ -294,45 +293,66 @@ function updateGridRegions(gridX, gridY, gridZ) {
   }
 }
 
-function playerControls () {
-	// Are the controls enabled? (Does the browser have pointer lock?)
-	if ( controls.controlsEnabled ) {
-		// Save the current time
-		var time = performance.now();
-		// Create a delta value based on current time
-		var delta = ( time - prevTime ) / 1000;
-		// Set the velocity.x and velocity.z using the calculated time delta
-		velocity.x -= velocity.x * 10.0 * delta;
-		velocity.z -= velocity.z * 10.0 * delta;
-		// As velocity.y is our "gravity," calculate delta
-		//velocity.y -= 9.8 * 100.0 * delta; // 100.0 = mass
-		var speed = 400.0 * delta;
-		if ( controls.moveForward ) {
-			velocity.z -= speed;
-		}
-		if ( controls.moveBackward ) {
-			velocity.z += speed;
-		}
-		if ( controls.moveLeft ) {
-			velocity.x -= speed;
-		}
-		if ( controls.moveRight ) {
-			velocity.x += speed;
-		}
-		// Update the position using the changed delta
-    player.object.position.x += velocity.x * delta;
-    player.object.position.y += velocity.y * delta;
-    player.object.position.z += velocity.z * delta;
-    
-		//camera.translateX( velocity.x * delta );
-		// camera.translateY( velociaty.y * delta );
-		//camera.translateZ( velocity.z * delta );
-		// Prevent the camera/player from falling out of the 'world'
-		// if ( controls.getObject().position.y < 10 ) {
-		// 	velocity.y = 0;
-		// 	controls.getObject().position.y = 10;
-		// }
-		// Save the time for future delta calculations
-		prevTime = time;
-	}
+// update the position and velocity of the player
+function updatePlayer(deltaTime) {
+  /*
+  // Set the velocity.x and velocity.z using the calculated time delta
+  velocity.x -= velocity.x * 10.0 * delta;
+  velocity.z -= velocity.z * 10.0 * delta;
+  // As velocity.y is our "gravity," calculate delta
+  //velocity.y -= 9.8 * 100.0 * delta; // 100.0 = mass
+  var speed = 400.0 * delta;*/
+  
+  if (controls.moveUp) {
+    var newVelocity = player.velocity.clone().normalize();
+    var right = newVelocity.clone().cross(player.up);
+    newVelocity.addScaledVector(player.up, playerRotationRate).normalize();
+    newVelocity.multiplyScalar(player.velocity.length());
+    player.velocity = newVelocity;
+    var newUp = right.clone().cross(newVelocity).normalize();
+    player.up = newUp;
+  }
+  if (controls.moveDown) {
+    var newVelocity = player.velocity.clone().normalize();
+    var right = newVelocity.clone().cross(player.up);
+    newVelocity.addScaledVector(player.up, -playerRotationRate).normalize();
+    newVelocity.multiplyScalar(player.velocity.length());
+    player.velocity = newVelocity;
+    var newUp = right.clone().cross(newVelocity).normalize();
+    player.up = newUp;
+  }
+  if (controls.moveRight) {
+    var newVelocity = player.velocity.clone().normalize();
+    var right = newVelocity.clone().cross(player.up);
+    newVelocity.addScaledVector(right, playerRotationRate).normalize();
+    newVelocity.multiplyScalar(player.velocity.length());
+    player.velocity = newVelocity;
+  }
+  if (controls.moveLeft) {
+    var newVelocity = player.velocity.clone().normalize();
+    var right = newVelocity.clone().cross(player.up);
+    newVelocity.addScaledVector(right, -playerRotationRate).normalize();
+    newVelocity.multiplyScalar(player.velocity.length());
+    player.velocity = newVelocity;
+  }
+  
+  
+  // Update the position using the changed delta
+  player.object.position.addScaledVector(player.velocity, deltaTime);
+  
+  // make the player look at the camera
+  player.object.up = player.up;
+  player.object.lookAt(camera.position.clone().addScaledVector(player.up, -2));
+  
+  //camera.translateX( velocity.x * delta );
+  // camera.translateY( velociaty.y * delta );
+  //camera.translateZ( velocity.z * delta );
+  // Prevent the camera/player from falling out of the 'world'
+  // if ( controls.getObject().position.y < 10 ) {
+  // 	velocity.y = 0;
+  // 	controls.getObject().position.y = 10;
+  // }
+  // Save the time for future delta calculations
+  prevTime = time;
+
 }
