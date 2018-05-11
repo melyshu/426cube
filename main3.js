@@ -1,22 +1,28 @@
 // Graphics global variables
 var camera, scene, renderer;
+var stats; // fps counter
+
+// Grid global variables
 var gridRegions = []; // regions of space that do stuff
-var gridCount = 3;   // region partitions per side
-var gridSize = 40;   // sidelength of region cube
-var gridDensity = 100;  // number of objects per region
+var gridCount = 5;   // region partitions per side
+var gridSize = 20;   // sidelength of region cube
+var gridDensity = 70;  // number of objects per region
 
 var objectsToGenerate = []; // a queue for objects to be created
-var maxGenerationsPerFrame = 100; // max number of objects to be generated per frame
+var maxGenerationsPerFrame = 50; // max number of objects to be generated per frame
 
 var objectsToRemove = []; // a queue for objects to be removed
 var maxRemovalsPerFrame = 100; // max number of objects to be removed per frame
 
-var stats; // fps counter
-
+// BEGIN misc sandbox global variables
 var geometry = new THREE.BoxGeometry(1, 1, 1);
 var material = new THREE.MeshNormalMaterial();
 
-var SPEED = 100;
+var SPEED = 10;
+
+var controls; // temporary navigation
+
+// END misc sandbox global variables
 
 // time variables
 var clock = new THREE.Clock();
@@ -31,7 +37,7 @@ animate();
 
 function init() {
   initGraphics();
-  initObjects();
+  initGrid();
 }
 
 function animate() {
@@ -58,47 +64,74 @@ function initGraphics() {
   stats.domElement.style.position = 'absolute';
   stats.domElement.style.top = '0px';
   document.body.appendChild( stats.domElement );
+  
+  controls = new THREE.FirstPersonControls( camera );
+  controls.movementSpeed = SPEED;
+  controls.lookSpeed = 0.1;
 }
 
-function initObjects() {  
-  var gridX = Math.round(camera.position.x/gridSize);
-  var gridY = Math.round(camera.position.y/gridSize);
-  var gridZ = Math.round(camera.position.z/gridSize);
-  
-  var halfGridCount = Math.floor(gridCount/2);
-  
-  for (var x = gridX - halfGridCount; x < gridX + halfGridCount + 1; x++) {
-    for (var y = gridY - halfGridCount; y < gridY + halfGridCount + 1; y++) {
-      for (var z = gridZ - halfGridCount; z < gridZ + halfGridCount + 1; z++) {
-        
-        gridRegions[gridIndex(x, y, z)] = {
-          x: x,
-          y: y,
-          z: z,
+// initialize grid
+function initGrid() {
+  for (var i = 0; i < gridCount; i++) {
+    for (var j = 0; j < gridCount; j++) {
+      for (var k = 0; k < gridCount; k++) {
+        gridRegions[gridIndex(i, j, k)] = {
+          x: NaN,
+          y: NaN,
+          z: NaN,
           objects: []
-        };
-        
-        objectsToGenerate.push({
-          x: x,
-          y: y,
-          z: z,
-          count: gridDensity
-        });
+        }
       }
     }
   }
 }
 
+// updates view
+function render() {
+  
+  // update time
+  var deltaTime = clock.getDelta();
+  time += deltaTime;
+  
+  // update scene
+  updateObjects(deltaTime);
+  updateCamera(deltaTime);
+  stats.update();
+  
+  // render!
+  renderer.render(scene, camera);
+}
+
+// generates and deletes objects as required
+function updateObjects(deltaTime) {
+  var gridX = Math.round(camera.position.x/gridSize);
+  var gridY = Math.round(camera.position.y/gridSize);
+  var gridZ = Math.round(camera.position.z/gridSize);
+  
+  updateGridRegions(gridX, gridY, gridZ);
+  generateObjects(deltaTime);
+  removeObjects(deltaTime);
+}
+
+// moves the location of the camera
+function updateCamera(deltaTime) {
+  controls.update(deltaTime);
+  //camera.position.z -= SPEED*deltaTime;
+}
+
+// returns the positive remainder of n divided by k
 function posMod(n, k) {
   return ((n % k) + k) % k;
 }
 
+// returns the index in gridRegions for the gridRegion indexed by (x, y, z)
 function gridIndex(x, y, z) {
   var i = (posMod(x, gridCount)* gridCount + posMod(y, gridCount))* gridCount + posMod(z, gridCount);
   return i;
 }
 
-function generateObjects() {
+// creates some objects from objectsToGenerate
+function generateObjects(deltaTime) {
   
   if (objectsToGenerate.length <= 0) return;
   
@@ -109,7 +142,10 @@ function generateObjects() {
   var gridRegion = gridRegions[gridIndex(x, y, z)];
   
   var count = 0;
-  while (count < maxGenerationsPerFrame) {
+  var maxToUpdate = gridCount*gridCount*gridDensity;
+  var progressToUpdate = deltaTime*SPEED/gridSize;
+  var total = maxGenerationsPerFrame; // Math.max(maxToUpdate*progressToUpdate*1.1, maxGenerationsPerFrame); // tried dynamically adjusting to speed
+  while (count < total) {
     
     // go to next entry if no more
     if (entry.count <= 0) {
@@ -125,6 +161,7 @@ function generateObjects() {
       continue;
     }
     
+    // generate random cube
     var cube = new THREE.Mesh(geometry, material);
     cube.position.set(
       x*gridSize + (Math.random() - 0.5)*gridSize,
@@ -132,6 +169,7 @@ function generateObjects() {
       z*gridSize + (Math.random() - 0.5)*gridSize,
     );
     
+    // update
     scene.add(cube);
     gridRegion.objects.push(cube);
     entry.count--;
@@ -139,69 +177,79 @@ function generateObjects() {
   }
 }
 
-function removeObjects() {
+// removes some objects from objectsToRemove
+function removeObjects(deltaTime) {
   var count = 0;
-  while (count < maxRemovalsPerFrame && objectsToRemove.length > 0) {
+  var maxToUpdate = gridCount*gridCount*gridDensity;
+  var progressToUpdate = deltaTime*SPEED/gridSize;
+  var total = maxRemovalsPerFrame; // Math.max(maxToUpdate*progressToUpdate*1.1, maxRemovalsPerFrame); // tried dynamically adjusting to speed
+  while (count < total && objectsToRemove.length > 0) {
     scene.remove(objectsToRemove.shift());
     count++;
   }
 }
 
-// updates view
-function render() {
-  var deltaTime = clock.getDelta();
-  updatePhysics(deltaTime);
-  renderer.render(scene, camera);
-  time += deltaTime;
+// updates the grid given the current grid indices
+function updateGridRegions(gridX, gridY, gridZ) {
   
-  stats.update();
-}
-
-function updatePhysics(deltaTime) {
-  camera.position.z -= SPEED*deltaTime;
-  updateObjects();
-}
-
-function updateObjects() {
-  var gridX = Math.round(camera.position.x/gridSize);
-  var gridY = Math.round(camera.position.y/gridSize);
-  var gridZ = Math.round(camera.position.z/gridSize);
-  
+  // initialize queue
   var halfGridCount = Math.floor(gridCount/2);
+  var queue = [{ x: gridX, y: gridY, z: gridZ }];
+  queue.push({ x: gridX+halfGridCount, y: gridY, z: gridZ });
+  queue.push({ x: gridX-halfGridCount, y: gridY, z: gridZ });
+  queue.push({ x: gridX, y: gridY+halfGridCount, z: gridZ });
+  queue.push({ x: gridX, y: gridY-halfGridCount, z: gridZ });
+  queue.push({ x: gridX, y: gridY, z: gridZ+halfGridCount });
+  queue.push({ x: gridX, y: gridY, z: gridZ-halfGridCount });
   
-  for (var x = gridX - halfGridCount; x < gridX + halfGridCount + 1; x++) {
-    for (var y = gridY - halfGridCount; y < gridY + halfGridCount + 1; y++) {
-      for (var z = gridZ - halfGridCount; z < gridZ + halfGridCount + 1; z++) {
-        
-        // get the grid region
-        var gridRegion = gridRegions[gridIndex(x, y, z)];
-        
-        // if this is different, remove and update!
-        if (gridRegion.x !== x || gridRegion.y !== y || gridRegion.z !== z) {
-          
-          // remove old region
-          for (var i = 0; i < gridRegion.objects.length; i++) {
-            objectsToRemove.push(gridRegion.objects[i]);
-          }
-          
-          gridRegions[gridIndex(x, y, z)] = {
-            x: x,
-            y: y,
-            z: z,
-            objects: []
-          };
-          
-          objectsToGenerate.push({
-            x: x,
-            y: y,
-            z: z,
-            count: gridDensity
-          });
-        }
+  while (queue.length > 0) {
+    var queueXYZ = queue.shift();
+    var qX = queueXYZ.x;
+    var qY = queueXYZ.y;
+    var qZ = queueXYZ.z;
+    
+    // ignore if out of bounds
+    if (
+      qX < gridX - halfGridCount || gridX + halfGridCount < qX ||
+      qY < gridY - halfGridCount || gridY + halfGridCount < qY ||
+      qZ < gridZ - halfGridCount || gridZ + halfGridCount < qZ
+    ) {
+      continue;
+    }
+    
+    // update if necessary
+    var gridRegion = gridRegions[gridIndex(qX, qY, qZ)];
+    if (gridRegion.x !== qX || gridRegion.y !== qY || gridRegion.z !== qZ) {
+      
+      // remove old region
+      for (var i = 0; i < gridRegion.objects.length; i++) {
+        objectsToRemove.push(gridRegion.objects[i]);
       }
+      
+      // create new region
+      gridRegions[gridIndex(qX, qY, qZ)] = {
+        x: qX,
+        y: qY,
+        z: qZ,
+        objects: []
+      };
+      
+      // send generation request
+      objectsToGenerate.push({
+        x: qX,
+        y: qY,
+        z: qZ,
+        count: gridDensity
+      });
+      
+      // search neighbors
+      queue.push({ x: qX+1, y: qY  , z: qZ   });
+      queue.push({ x: qX-1, y: qY  , z: qZ   });
+      queue.push({ x: qX  , y: qY+1, z: qZ   });
+      queue.push({ x: qX  , y: qY-1, z: qZ   });
+      queue.push({ x: qX  , y: qY  , z: qZ+1 });
+      queue.push({ x: qX  , y: qY  , z: qZ-1 });
     }
   }
-
-  generateObjects();
-  removeObjects();
 }
+
