@@ -6,7 +6,7 @@ var stats; // fps counter
 var gridRegions = []; // regions of space that do stuff
 var gridCount = 5;   // region partitions per side
 var gridSize = 15;   // sidelength of region cube
-var gridDensity = 5;  // number of objects per region
+var gridDensity = 15;  // number of objects per region
 
 var objectsToGenerate = []; // a queue for objects to be created
 var maxGenerationsPerFrame = 150; // max number of objects to be generated per frame
@@ -354,8 +354,8 @@ window.addEventListener( 'mousedown', function( event ) {
     );
 
     var raycaster = new THREE.Raycaster();
-    raycaster.setFromCamera( mouseCoords, camera );
-    console.log("raycaster " + raycaster.ray.direction.x + " " + raycaster.ray.direction.y + " " + raycaster.ray.direction.z);
+    raycaster.setFromCamera( mouseCoords, camera);
+    //console.log("raycaster " + raycaster.ray.direction.x + " " + raycaster.ray.direction.y + " " + raycaster.ray.direction.z);
     var direction = new THREE.Vector3(raycaster.ray.direction.x, raycaster.ray.direction.y, raycaster.ray.direction.z);
     var origin = new THREE.Vector3(raycaster.ray.origin.x, raycaster.ray.origin.y, raycaster.ray.origin.z); 
 
@@ -367,16 +367,16 @@ window.addEventListener( 'mousedown', function( event ) {
     var ball = new THREE.Mesh( new THREE.SphereBufferGeometry( ballRadius, 14, 10 ), ballMaterial );
     ball.castShadow = true;
     ball.receiveShadow = true;
-    var position = new THREE.Vector3(0, 0, -5); 
-    // ball.position.x = position.x; 
-    // ball.position.y = position.y; 
-    // ball.position.z = position.z; 
+
     ball.position.x = direction.x + origin.x; 
     ball.position.y = direction.y + origin.y; 
     ball.position.z = direction.z + origin.z; 
 
+    var offset = player.object.position.clone().sub(camera.position); 
+    ball.position.add(offset); 
+
     var velocity = new THREE.Vector3(direction.x, direction.y, direction.z);  
-    velocity.multiplyScalar(24); 
+    velocity.multiplyScalar(70); 
 
     var newAmmo = new myAmmo(ball, velocity); 
     
