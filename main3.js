@@ -12,7 +12,7 @@ var playerRotationRate = 0.03;
 var cubes = [];
 var cubeCount = 10000;
 var cubeColorCount = 5;
-var visibleRadius = 100;
+var visibleRadius = 50;
 
 // clock
 var clock = new THREE.Clock();
@@ -31,7 +31,7 @@ function init() {
   initGraphics();
   initPlayer();
   initCubes();
-  initInput(); 
+  initInput();
 }
 
 function animate() {
@@ -48,7 +48,7 @@ function initGraphics() {
 
   // scene
   scene = new THREE.Scene();
-  scene.add(new THREE.AmbientLight(0x707070)); // MEL: base light for debugging?
+  // scene.add(new THREE.AmbientLight(0x707070)); // MEL: base light for debugging?
 
   // renderer
   renderer = new THREE.WebGLRenderer();
@@ -72,6 +72,7 @@ function initPlayer() {
   player.object = new THREE.Mesh(new THREE.CubeGeometry(0.5, 0.5, 0.5), new THREE.MeshNormalMaterial());
   player.light = new THREE.PointLight(0xffffff, 1, 50, 2);
   player.light.position.set(0, 0, 0);
+  player.light.castShadow = true;
   
   scene.add(player.object);
   scene.add(player.light);
@@ -101,6 +102,10 @@ function initCubes() {
       z = (2*Math.random() - 1)*visibleRadius;
     } while (x*x + y*y + z*z > R2);
     cube.position.set(x, y, z);
+    
+    cube.castShadow = true;
+    cube.receiveShadow = true;
+    
     scene.add(cube);
     cubes.push(cube);
   }
