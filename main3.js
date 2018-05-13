@@ -5,7 +5,10 @@ var camera, scene, renderer, controls, stats;
 
 // player
 var player = {};
-var playerSpeed = 10;
+var playerBaseSpeed = 1;
+var playerSpeedupRate = 2;
+var playerSpeedupOffset = 10;
+var playerSpeed = 0;
 var playerRotationRate = 0.3;
 
 // cubes
@@ -76,13 +79,14 @@ function initGraphics() {
 }
 
 function initPlayer() {
+  playerSpeed = playerSpeedupRate*Math.sqrt(playerSpeedupOffset + time) + playerBaseSpeed;
+  
   player.position = new THREE.Vector3(0, 0, 0);
   player.velocity = new THREE.Vector3(0, 0, playerSpeed);
   player.up = new THREE.Vector3(0, 1, 0);
   player.object = new THREE.Mesh(new THREE.CubeGeometry(0.5, 0.5, 0.5), new THREE.MeshNormalMaterial());
   player.light = new THREE.PointLight(0xffffff, 1, 50, 2);
   player.light.position.set(0, 0, 0);
-  player.light.castShadow = true;
   
   scene.add(player.object);
   scene.add(player.light);
@@ -90,7 +94,7 @@ function initPlayer() {
   infoText = document.createElement('div');
   infoText.style.position = 'absolute';
   infoText.style.color = "white";
-  infoText.innerHTML = "Player Speed:" + player.velocity.length(); // tracks speed of player
+  infoText.innerHTML = "Player Speed: " + playerSpeed.toFixed(3); // tracks speed of player
   infoText.style.top = 12 + 'px';
   infoText.style.right = 12 + 'px';
   document.body.appendChild(infoText);
@@ -121,9 +125,6 @@ function initCubes() {
     } while (x*x + y*y + z*z > R2);
     cube.position.set(x, y, z);
     
-    cube.castShadow = true;
-    cube.receiveShadow = true;
-    
     scene.add(cube);
     cubes.push(cube);
   }
@@ -137,12 +138,12 @@ function render() {
   time += deltaTime;
 
   // update scene
+  updateSpeed();
   updateCubes(deltaTime);
   updatePlayer(deltaTime);
   updateCamera(deltaTime);
   updateAmmoPhysics(deltaTime); 
   stats.update();
-  updateSpeed();
 
   // render!
   renderer.render(scene, camera);
@@ -212,9 +213,11 @@ function updateAmmoPhysics(deltaTime) {
 function updateSpeed() {
   // reduces speed if thru ring
   // if ( cube in ring)
+  
+  playerSpeed = playerSpeedupRate*Math.sqrt(playerSpeedupOffset + time) + playerBaseSpeed;
 
   // updates speedtracker
-  infoText.innerHTML = "Player Speed:" + player.velocity.length();
+  infoText.innerHTML = "Player Speed: " + playerSpeed.toFixed(3);
 }
 
 function initInput() {
