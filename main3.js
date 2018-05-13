@@ -343,6 +343,14 @@ function updatePlayer(deltaTime) {
   player.object.lookAt(camera.position.clone().addScaledVector(player.up, -2));
 }
 
+function updateAmmoPhysics(deltaTime) {
+  for (var i = 0; i < ammo.length; i++) {
+    ammo[i].mesh.position.add(ammo[i].velocity.clone().multiplyScalar(deltaTime));
+   // ammo[i]._l.position.copy(ammo[i].mesh.position);
+    //scene.add(ammo[i].mesh); // MEL: i think this is not necessary once it's already there
+  }
+}
+
 function initInput() {
 window.addEventListener( 'mousedown', function( event ) {
 
@@ -354,6 +362,7 @@ window.addEventListener( 'mousedown', function( event ) {
     );
 
     var raycaster = new THREE.Raycaster();
+
     raycaster.setFromCamera( mouseCoords, camera);
     //console.log("raycaster " + raycaster.ray.direction.x + " " + raycaster.ray.direction.y + " " + raycaster.ray.direction.z);
     var direction = new THREE.Vector3(raycaster.ray.direction.x, raycaster.ray.direction.y, raycaster.ray.direction.z);
@@ -380,17 +389,13 @@ window.addEventListener( 'mousedown', function( event ) {
 
     var newAmmo = new myAmmo(ball, velocity); 
     
+    // MEL: hehe 
+    // newAmmo._l = new THREE.PointLight(0xffffff, 1, 50, 2);
+    // newAmmo._l.position.copy(position);
+    //scene.add(newAmmo._l);
     scene.add(ball); 
     ammo.push(newAmmo); 
 
   }, false );
 
-}
-
-function updateAmmoPhysics(deltaTime) {
-  for (var i = 0; i < ammo.length; i++) {
-    ammo[i].mesh.position.add(ammo[i].velocity.clone().multiplyScalar(deltaTime)); 
-    scene.add(ammo[i].mesh);
-
-  }
 }
