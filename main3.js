@@ -338,6 +338,14 @@ function updatePlayer(deltaTime) {
   player.object.lookAt(camera.position.clone().addScaledVector(player.up, -2));
 }
 
+function updateAmmoPhysics(deltaTime) {
+  for (var i = 0; i < ammo.length; i++) {
+    ammo[i].mesh.position.add(ammo[i].velocity.clone().multiplyScalar(deltaTime));
+    ammo[i]._l.position.copy(ammo[i].mesh.position);
+    //scene.add(ammo[i].mesh); // MEL: i think this is not necessary once it's already there
+  }
+}
+
 function initInput() {
 window.addEventListener( 'mousedown', function( event ) {
 
@@ -350,7 +358,7 @@ window.addEventListener( 'mousedown', function( event ) {
 
     var raycaster = new THREE.Raycaster();
     raycaster.setFromCamera( mouseCoords, camera );
-    console.log("raycaster " + raycaster.ray.direction.x + " " + raycaster.ray.direction.y + " " + raycaster.ray.direction.z);
+    //console.log("raycaster " + raycaster.ray.direction.x + " " + raycaster.ray.direction.y + " " + raycaster.ray.direction.z);
     var direction = new THREE.Vector3(raycaster.ray.direction.x, raycaster.ray.direction.y, raycaster.ray.direction.z);
     var origin = new THREE.Vector3(raycaster.ray.origin.x, raycaster.ray.origin.y, raycaster.ray.origin.z);
 
@@ -369,179 +377,22 @@ window.addEventListener( 'mousedown', function( event ) {
     ball.position.x = direction.x + origin.x;
     ball.position.y = direction.y + origin.y;
     ball.position.z = direction.z + origin.z;
+    
 
     var velocity = new THREE.Vector3(direction.x, direction.y, direction.z);
     velocity.multiplyScalar(24);
 
     var newAmmo = new myAmmo(ball, velocity);
+    
+    // MEL: hehe 
+    newAmmo._l = new THREE.PointLight(0xffffff, 1, 50, 2);
+    newAmmo._l.position.copy(position);
+    scene.add(newAmmo._l);
 
     scene.add(ball);
     ammo.push(newAmmo);
+    
 
   }, false );
 
-}
-
-function updateAmmoPhysics(deltaTime) {
-  for (var i = 0; i < ammo.length; i++) {
-    ammo[i].mesh.position.add(ammo[i].velocity.clone().multiplyScalar(deltaTime));
-    scene.add(ammo[i].mesh);
-
-  }
-}
-
-function initInput() {
-window.addEventListener( 'mousedown', function( event ) {
-
-
-    var mouseCoords = new THREE.Vector2();
-    mouseCoords.set(
-      ( event.clientX / window.innerWidth ) * 2 - 1,
-      - ( event.clientY / window.innerHeight ) * 2 + 1
-    );
-
-    var raycaster = new THREE.Raycaster();
-    raycaster.setFromCamera( mouseCoords, camera );
-    console.log("raycaster " + raycaster.ray.direction.x + " " + raycaster.ray.direction.y + " " + raycaster.ray.direction.z);
-    var direction = new THREE.Vector3(raycaster.ray.direction.x, raycaster.ray.direction.y, raycaster.ray.direction.z);
-    var origin = new THREE.Vector3(raycaster.ray.origin.x, raycaster.ray.origin.y, raycaster.ray.origin.z);
-
-    // Creates a ball and throws it
-    var ballMass = 35;
-    var ballRadius = 1;
-    var ballMaterial = new THREE.MeshPhongMaterial( { color: 0xffffff } );
-
-    var ball = new THREE.Mesh( new THREE.SphereBufferGeometry( ballRadius, 14, 10 ), ballMaterial );
-    ball.castShadow = true;
-    ball.receiveShadow = true;
-    var position = new THREE.Vector3(0, 0, -5);
-    // ball.position.x = position.x;
-    // ball.position.y = position.y;
-    // ball.position.z = position.z;
-    ball.position.x = direction.x + origin.x;
-    ball.position.y = direction.y + origin.y;
-    ball.position.z = direction.z + origin.z;
-
-    var velocity = new THREE.Vector3(direction.x, direction.y, direction.z);
-    velocity.multiplyScalar(24);
-
-    var newAmmo = new myAmmo(ball, velocity);
-
-    scene.add(ball);
-    ammo.push(newAmmo);
-
-  }, false );
-
-}
-
-function updateAmmoPhysics(deltaTime) {
-  for (var i = 0; i < ammo.length; i++) {
-    ammo[i].mesh.position.add(ammo[i].velocity.clone().multiplyScalar(deltaTime));
-    scene.add(ammo[i].mesh);
-
-  }
-}
-
-function initInput() {
-window.addEventListener( 'mousedown', function( event ) {
-
-
-    var mouseCoords = new THREE.Vector2();
-    mouseCoords.set(
-      ( event.clientX / window.innerWidth ) * 2 - 1,
-      - ( event.clientY / window.innerHeight ) * 2 + 1
-    );
-
-    var raycaster = new THREE.Raycaster();
-    raycaster.setFromCamera( mouseCoords, camera );
-    console.log("raycaster " + raycaster.ray.direction.x + " " + raycaster.ray.direction.y + " " + raycaster.ray.direction.z);
-    var direction = new THREE.Vector3(raycaster.ray.direction.x, raycaster.ray.direction.y, raycaster.ray.direction.z);
-    var origin = new THREE.Vector3(raycaster.ray.origin.x, raycaster.ray.origin.y, raycaster.ray.origin.z);
-
-    // Creates a ball and throws it
-    var ballMass = 35;
-    var ballRadius = 1;
-    var ballMaterial = new THREE.MeshPhongMaterial( { color: 0xffffff } );
-
-    var ball = new THREE.Mesh( new THREE.SphereBufferGeometry( ballRadius, 14, 10 ), ballMaterial );
-    ball.castShadow = true;
-    ball.receiveShadow = true;
-    var position = new THREE.Vector3(0, 0, -5);
-    // ball.position.x = position.x;
-    // ball.position.y = position.y;
-    // ball.position.z = position.z;
-    ball.position.x = direction.x + origin.x;
-    ball.position.y = direction.y + origin.y;
-    ball.position.z = direction.z + origin.z;
-
-    var velocity = new THREE.Vector3(direction.x, direction.y, direction.z);
-    velocity.multiplyScalar(24);
-
-    var newAmmo = new myAmmo(ball, velocity);
-
-    scene.add(ball);
-    ammo.push(newAmmo);
-
-  }, false );
-
-}
-
-function updateAmmoPhysics(deltaTime) {
-  for (var i = 0; i < ammo.length; i++) {
-    ammo[i].mesh.position.add(ammo[i].velocity.clone().multiplyScalar(deltaTime));
-    scene.add(ammo[i].mesh);
-
-  }
-}
-
-function initInput() {
-window.addEventListener( 'mousedown', function( event ) {
-
-
-    var mouseCoords = new THREE.Vector2();
-    mouseCoords.set(
-      ( event.clientX / window.innerWidth ) * 2 - 1,
-      - ( event.clientY / window.innerHeight ) * 2 + 1
-    );
-
-    var raycaster = new THREE.Raycaster();
-    raycaster.setFromCamera( mouseCoords, camera );
-    console.log("raycaster " + raycaster.ray.direction.x + " " + raycaster.ray.direction.y + " " + raycaster.ray.direction.z);
-    var direction = new THREE.Vector3(raycaster.ray.direction.x, raycaster.ray.direction.y, raycaster.ray.direction.z);
-    var origin = new THREE.Vector3(raycaster.ray.origin.x, raycaster.ray.origin.y, raycaster.ray.origin.z);
-
-    // Creates a ball and throws it
-    var ballMass = 35;
-    var ballRadius = 1;
-    var ballMaterial = new THREE.MeshPhongMaterial( { color: 0xffffff } );
-
-    var ball = new THREE.Mesh( new THREE.SphereBufferGeometry( ballRadius, 14, 10 ), ballMaterial );
-    ball.castShadow = true;
-    ball.receiveShadow = true;
-    var position = new THREE.Vector3(0, 0, -5);
-    // ball.position.x = position.x;
-    // ball.position.y = position.y;
-    // ball.position.z = position.z;
-    ball.position.x = direction.x + origin.x;
-    ball.position.y = direction.y + origin.y;
-    ball.position.z = direction.z + origin.z;
-
-    var velocity = new THREE.Vector3(direction.x, direction.y, direction.z);
-    velocity.multiplyScalar(24);
-
-    var newAmmo = new myAmmo(ball, velocity);
-
-    scene.add(ball);
-    ammo.push(newAmmo);
-
-  }, false );
-
-}
-
-function updateAmmoPhysics(deltaTime) {
-  for (var i = 0; i < ammo.length; i++) {
-    ammo[i].mesh.position.add(ammo[i].velocity.clone().multiplyScalar(deltaTime));
-    scene.add(ammo[i].mesh);
-
-  }
 }
