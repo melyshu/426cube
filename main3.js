@@ -181,12 +181,14 @@ function render() {
 
 function updateRings(deltaTime) {
   var playerPosition = player.object.position;
+  var playerToCamera = camera.position.clone().sub(player.object.position).normalize();
+  console.log(playerToCamera.length());
   for (var i = 0; i < rings.length; i++) {
     var ring = rings[i];
     if (playerPosition.distanceToSquared(ring.position) > visibleRadius*visibleRadius) {
       ring.position.sub(playerPosition).normalize().multiplyScalar(-visibleRadius).add(playerPosition);
     }
-    ring.lookAt(camera.position);
+    ring.lookAt(player.object.position.clone().add(playerToCamera.multiplyScalar(1.5)));
   }
 }
 
@@ -229,7 +231,7 @@ function updatePlayer(deltaTime) {
     var playerPosition = player.object.position;
     var ringPosition = ring.position;
     if (playerPosition.distanceTo(ringPosition) <= torusRadius) {
-      player.velocity.addScaledVector(player.velocity, -1/100);
+      player.velocity.addScaledVector(player.velocity, -1/10);
     }
   }
 
