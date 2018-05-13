@@ -36,6 +36,13 @@ var time = 0;
 var ammo = [];
 var GRAVITY = new THREE.Vector3(0, -5, 0);
 
+// graphics light 
+var lightEffect = {}; 
+var lights = []; 
+
+// sound effect
+var boomSound; 
+
 // === MAIN CODE ===
 init();
 animate();
@@ -47,6 +54,9 @@ function init() {
   initCubes();
   initRings();
   initInput();
+
+  //boomSound = new sound("effects/boom.wav"); 
+  boomSound = new Audio("effects/boom.mp3"); 
 }
 
 function animate() {
@@ -185,12 +195,14 @@ function render() {
 
 function updateRings(deltaTime) {
   var playerPosition = player.object.position;
+  var playerToCamera = camera.position.clone().sub(player.object.position).normalize();
+  console.log(playerToCamera.length());
   for (var i = 0; i < rings.length; i++) {
     var ring = rings[i];
     if (playerPosition.distanceToSquared(ring.position) > visibleRadius*visibleRadius) {
       ring.position.sub(playerPosition).normalize().multiplyScalar(-visibleRadius).add(playerPosition);
     }
-    ring.lookAt(camera.position);
+    ring.lookAt(player.object.position.clone().add(playerToCamera.multiplyScalar(1.5)));
   }
 }
 
@@ -233,6 +245,7 @@ function updatePlayer(deltaTime) {
     var playerPosition = player.object.position;
     var ringPosition = ring.position;
     if (playerPosition.distanceTo(ringPosition) <= torusRadius) {
+      player.velocity.addScaledVector(player.velocity, -1/10);
       ringSpeedupOffset += deltaTime*ringSpeedupOffsetRate;
     }
   }
@@ -248,6 +261,13 @@ function updatePlayer(deltaTime) {
 
   // make the player look at the camera
   player.object.up = player.up;
+
+  // check for player collision with cube
+  if (checkCollision(player.object)) {
+    console.log("player collision"); 
+   // player.object.
+  }
+
   player.object.lookAt(camera.position.clone().addScaledVector(player.up, -1));
 }
 
@@ -261,11 +281,58 @@ function updateCamera(deltaTime) {
 }
 
 function updateAmmoPhysics(deltaTime) {
+
   for (var i = 0; i < ammo.length; i++) {
+
+    if (!ammo[i].alive)
+      continue; 
+
     ammo[i].mesh.position.add(ammo[i].velocity.clone().multiplyScalar(deltaTime));
+    if (player.position.distanceToSquared(ammo[i].mesh.position) > 50*visibleRadius*visibleRadius)
+      ammo[i].alive = false; 
+
+    // check for collisions with cubes
+    if (checkCollision(ammo[i].mesh)) {
+      boomSound.play(); 
+      //triggerCollision(ammo[i].mesh); 
+    }
    // ammo[i]._l.position.copy(ammo[i].mesh.position);
-    //scene.add(ammo[i].mesh); // MEL: i think this is not necessary once it's already there
   }
+
+}
+
+// checks if collision with any cubes with mesh 
+function checkCollision(mesh) {
+
+ var meshBBox = new THREE.Box3().setFromObject(mesh);  
+
+for (var i = 0; i < cubes.length; i++) {
+  cubes[i].geometry.computeBoundingBox(); 
+  var min = cubes[i].position.clone().sub(new THREE.Vector3(0.5, 0.5, 0.5));  
+  var max = cubes[i].position.clone().add(new THREE.Vector3(0.5, 0.5, 0.5));  
+  var box = new THREE.Box3(min, max); 
+
+  if (box.intersectsBox(meshBBox)) {
+    //triggerCubeCollision(mesh); 
+    var playerPosition = player.object.position;
+    cubes[i].position.sub(playerPosition).normalize().multiplyScalar(-visibleRadius).add(playerPosition);
+    return true; 
+  }
+}
+}
+
+function triggerCubeCollision(mesh) {
+  var newLight = new THREE.PointLight(0xffffff, 1, 100, 2); 
+  newLight.position.set(mesh.position); 
+
+  lights.push({
+    light:newLight, 
+    lifetime:time, 
+    }
+  )
+  
+  scene.add(newLight); 
+
 }
 
 function updateSpeed() {
@@ -308,12 +375,13 @@ window.addEventListener( 'mousedown', function( event ) {
     var offset = player.object.position.clone().sub(camera.position);
     ball.position.add(offset);
 
-    var velocity = new THREE.Vector3(direction.x, direction.y, direction.z);
-    velocity.multiplyScalar(70);
+    var velocity = new THREE.Vector3(direction.x, direction.y, direction.z);  
+    velocity.multiplyScalar(40); 
 
-    var newAmmo = new myAmmo(ball, velocity);
+    var newAmmo = new myAmmo(ball, velocity, ammo.length); 
+    
+    // MEL: hehe 
 
-    // MEL: hehe
     // newAmmo._l = new THREE.PointLight(0xffffff, 1, 50, 2);
     // newAmmo._l.position.copy(position);
     //scene.add(newAmmo._l);
