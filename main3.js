@@ -137,6 +137,14 @@ function updateObjects(deltaTime) {
   light.position.set(player.object.position.x, player.object.position.y, player.object.position.z);
 }
 
+// gets current grid region index
+function getCurrGrid(position) {
+  var gridX = Math.round(position.x/gridSize);
+  var gridY = Math.round(position.y/gridSize);
+  var gridZ = Math.round(position.z/gridSize);
+  return gridIndex(gridX, gridY, gridZ); 
+}
+
 // moves the location of the camera
 function updateCamera(deltaTime) {
   
@@ -341,13 +349,59 @@ function updatePlayer(deltaTime) {
   // make the player look at the camera
   player.object.up = player.up;
   player.object.lookAt(camera.position.clone().addScaledVector(player.up, -2));
+
+  // check for player collision with cube
+  if (checkCollision(player.object)) {
+    console.log("player collision"); 
+   // player.object.
+  }
 }
 
 function updateAmmoPhysics(deltaTime) {
+
+  var ammoToRemove = []; 
   for (var i = 0; i < ammo.length; i++) {
     ammo[i].mesh.position.add(ammo[i].velocity.clone().multiplyScalar(deltaTime));
+
+    // remove ammo in irrelevant grids
+    var gridIndex = getCurrGrid(ammo[i].mesh.position); 
+    // if (!gridIsValid(gridIndex)) {
+    //   scene.remove(ammo[i]); 
+    //   ammo.shift(); 
+    // }
+
+    // check for collisions with cubes
+    if (checkCollision(ammo[i].mesh)) {
+      ammoToRemove.push(ammo[i]); 
+      myAmmo.triggerCollision(ammo[i].mesh); 
+      scene.remove(ammo[i]); 
+    }
+
    // ammo[i]._l.position.copy(ammo[i].mesh.position);
-    //scene.add(ammo[i].mesh); // MEL: i think this is not necessary once it's already there
+  }
+}
+
+// checks if collision with any cubes with mesh 
+function checkCollision(mesh) {
+
+ var meshBBox = new THREE.Box3().setFromObject(mesh);  
+
+  for (var j = 0; j < gridRegions.length; j++) {
+    var cubes = gridRegions[j].objects; 
+    var numObjects = cubes.length; 
+
+    for (var i = 0; i < numObjects; i++) {
+      cubes[i].geometry.computeBoundingBox(); 
+      var min = cubes[i].position.clone().sub(new THREE.Vector3(0.5, 0.5, 0.5));  
+      var max = cubes[i].position.clone().add(new THREE.Vector3(0.5, 0.5, 0.5));  
+      var box = new THREE.Box3(min, max); 
+
+      if (box.intersectsBox(meshBBox)) {
+        myAmmo.triggerCollision(mesh); 
+        scene.remove(cubes[i]); 
+        return true; 
+      }
+    }
   }
 }
 
@@ -385,9 +439,9 @@ window.addEventListener( 'mousedown', function( event ) {
     ball.position.add(offset); 
 
     var velocity = new THREE.Vector3(direction.x, direction.y, direction.z);  
-    velocity.multiplyScalar(70); 
+    velocity.multiplyScalar(40); 
 
-    var newAmmo = new myAmmo(ball, velocity); 
+    var newAmmo = new myAmmo(ball, velocity, ammo.length); 
     
     // MEL: hehe 
     // newAmmo._l = new THREE.PointLight(0xffffff, 1, 50, 2);
