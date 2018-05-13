@@ -5,7 +5,9 @@ var camera, scene, renderer, controls, stats;
 
 // player
 var player = {};
-var playerSpeed = 10;
+var playerBaseSpeed = 5;
+var playerSpeedupRate = 0.03;
+var playerSpeed = 0;
 var playerRotationRate = 0.3;
 
 // cubes
@@ -20,6 +22,8 @@ var ringCount = 100;
 var visibleRadius = 50;
 var torusRadius = 1.2; // length from center to center of tube
 var tubeRadius = 0.1; // radius of the tube
+var ringSpeedupOffset = 0;
+var ringSpeedupOffsetRate = 3;
 
 // speed tracker
 var infoText;
@@ -77,6 +81,8 @@ function initGraphics() {
 }
 
 function initPlayer() {
+  playerSpeed = playerSpeedupRate*(time - ringSpeedupOffset) + playerBaseSpeed;
+  
   player.position = new THREE.Vector3(0, 0, 0);
   player.velocity = new THREE.Vector3(0, 0, playerSpeed);
   player.up = new THREE.Vector3(0, 1, 0);
@@ -84,15 +90,14 @@ function initPlayer() {
   player.object = new THREE.Mesh(new THREE.CubeGeometry(player.size, player.size, player.size), new THREE.MeshNormalMaterial());
   player.light = new THREE.PointLight(0xffffff, 1, 50, 2);
   player.light.position.set(0, 0, 0);
-  player.light.castShadow = true;
-
+  
   scene.add(player.object);
   scene.add(player.light);
 
   infoText = document.createElement('div');
   infoText.style.position = 'absolute';
   infoText.style.color = "white";
-  infoText.innerHTML = "Player Speed:" + player.velocity.length(); // tracks speed of player
+  infoText.innerHTML = "Player Speed: " + playerSpeed.toFixed(3); // tracks speed of player
   infoText.style.top = 12 + 'px';
   infoText.style.right = 12 + 'px';
   document.body.appendChild(infoText);
@@ -151,10 +156,7 @@ function initCubes() {
       z = (2*Math.random() - 1)*visibleRadius;
     } while (x*x + y*y + z*z > R2);
     cube.position.set(x, y, z);
-
-    cube.castShadow = true;
-    cube.receiveShadow = true;
-
+    
     scene.add(cube);
     cubes.push(cube);
   }
@@ -168,6 +170,7 @@ function render() {
   time += deltaTime;
 
   // update scene
+  updateSpeed();
   updateCubes(deltaTime);
   updateRings(deltaTime);
   updatePlayer(deltaTime);
@@ -205,7 +208,7 @@ function updateCubes(deltaTime) {
 // update the position and velocity of the player
 function updatePlayer(deltaTime) {
   var position = player.object.position.clone();
-  var velocity = player.velocity.clone();
+  var velocity = player.velocity.clone().setLength(playerSpeed);
   var up = player.up.clone();
   var right = velocity.clone().cross(up).normalize();
 
@@ -231,12 +234,16 @@ function updatePlayer(deltaTime) {
     var playerPosition = player.object.position;
     var ringPosition = ring.position;
     if (playerPosition.distanceTo(ringPosition) <= torusRadius) {
+<<<<<<< HEAD
       player.velocity.addScaledVector(player.velocity, -1/10);
+=======
+      ringSpeedupOffset += deltaTime*ringSpeedupOffsetRate;
+>>>>>>> e25ad08d6be1f5bc50c6a0f9d210446c0dd2231e
     }
   }
 
   //update speed tracker
-  infoText.innerHTML = "Player Speed:" + player.velocity.length();
+  infoText.innerHTML = "Player Speed: " + playerSpeed.toFixed(3);
 
   // Update the position using the changed delta
   player.object.position.addScaledVector(player.velocity, deltaTime);
@@ -246,13 +253,13 @@ function updatePlayer(deltaTime) {
 
   // make the player look at the camera
   player.object.up = player.up;
-  player.object.lookAt(camera.position.clone().addScaledVector(player.up, -2));
+  player.object.lookAt(camera.position.clone().addScaledVector(player.up, -1));
 }
 
 // moves the location of the camera
 function updateCamera(deltaTime) {
 
-  var pos = player.object.position.clone().addScaledVector(player.velocity.clone().normalize(), -3).addScaledVector(player.up, 2);
+  var pos = player.object.position.clone().addScaledVector(player.velocity.clone().normalize(), -3).addScaledVector(player.up, 1);
   camera.position.copy(pos);
   camera.up.copy(player.up);
   camera.lookAt(player.object.position);
@@ -264,6 +271,16 @@ function updateAmmoPhysics(deltaTime) {
    // ammo[i]._l.position.copy(ammo[i].mesh.position);
     //scene.add(ammo[i].mesh); // MEL: i think this is not necessary once it's already there
   }
+}
+
+function updateSpeed() {
+  // reduces speed if thru ring
+  // if ( cube in ring)
+  
+  playerSpeed = playerSpeedupRate*(time - ringSpeedupOffset) + playerBaseSpeed;
+
+  // updates speedtracker
+  infoText.innerHTML = "Player Speed: " + playerSpeed.toFixed(3);
 }
 
 function initInput() {
