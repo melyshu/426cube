@@ -136,9 +136,10 @@ function initCubes() {
 
   // set up colors
   var geometry = new THREE.CubeGeometry(1, 1, 1);
+  var colors = [0xdd0000, 0x00dd00, 0x0000dd, 0xdddd00, 0xdd00dd, 0x00dddd];
   var materials = []
-  for (var i = 0; i < cubeColorCount; i++) {
-    var c = Math.floor(0xffffff*(Math.random() + 1)/2);
+  for (var i = 0; i < colors.length; i++) {
+    var c = colors[i];
     materials.push(new THREE.MeshPhongMaterial({ color: c }));
   }
 
@@ -268,9 +269,6 @@ function updateAmmoPhysics(deltaTime) {
 }
 
 function updateSpeed() {
-  // reduces speed if thru ring
-  // if ( cube in ring)
-  
   playerSpeed = playerSpeedupRate*(time - ringSpeedupOffset) + playerBaseSpeed;
 
   // updates speedtracker
