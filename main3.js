@@ -6,7 +6,7 @@ var camera, scene, renderer, controls, stats;
 // player
 var player = {};
 var playerSpeed = 10;
-var playerRotationRate = 0.03;
+var playerRotationRate = 0.3;
 
 // cubes
 var cubes = [];
@@ -160,44 +160,32 @@ function updateCubes(deltaTime) {
 
 // update the position and velocity of the player
 function updatePlayer(deltaTime) {
+  var position = player.object.position.clone();
+  var velocity = player.velocity.clone();
+  var up = player.up.clone();
+  var right = velocity.clone().cross(up).normalize();
   
   if (controls.moveUp) {
-    var newVelocity = player.velocity.clone().normalize();
-    var right = newVelocity.clone().cross(player.up);
-    newVelocity.addScaledVector(player.up, playerRotationRate).normalize();
-    newVelocity.multiplyScalar(player.velocity.length());
-    player.velocity = newVelocity;
-    var newUp = right.clone().cross(newVelocity).normalize();
-    player.up = newUp;
+    velocity.addScaledVector(up, playerRotationRate).setLength(playerSpeed);
+    up = right.clone().cross(velocity).normalize();
   }
   if (controls.moveDown) {
-    var newVelocity = player.velocity.clone().normalize();
-    var right = newVelocity.clone().cross(player.up);
-    newVelocity.addScaledVector(player.up, -playerRotationRate).normalize();
-    newVelocity.multiplyScalar(player.velocity.length());
-    player.velocity = newVelocity;
-    var newUp = right.clone().cross(newVelocity).normalize();
-    player.up = newUp;
+    velocity.addScaledVector(up, -playerRotationRate).setLength(playerSpeed);
+    up = right.clone().cross(velocity).normalize();
   }
   if (controls.moveRight) {
-    var newVelocity = player.velocity.clone().normalize();
-    var right = newVelocity.clone().cross(player.up);
-    newVelocity.addScaledVector(right, playerRotationRate).normalize();
-    newVelocity.multiplyScalar(player.velocity.length());
-    player.velocity = newVelocity;
+    velocity.addScaledVector(right, playerRotationRate).setLength(playerSpeed);
   }
   if (controls.moveLeft) {
-    var newVelocity = player.velocity.clone().normalize();
-    var right = newVelocity.clone().cross(player.up);
-    newVelocity.addScaledVector(right, -playerRotationRate).normalize();
-    newVelocity.multiplyScalar(player.velocity.length());
-    player.velocity = newVelocity;
+    velocity.addScaledVector(right, -playerRotationRate).setLength(playerSpeed);
   }
   
   
   // Update the position using the changed delta
   player.object.position.addScaledVector(player.velocity, deltaTime);
   player.light.position.copy(player.object.position);
+  player.velocity = velocity;
+  player.up = up;
   
   // make the player look at the camera
   player.object.up = player.up;
