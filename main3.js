@@ -5,24 +5,25 @@ var camera, scene, renderer, controls, stats;
 
 // player
 var player = {};
-var playerBaseSpeed = 1;
-var playerSpeedupRate = 2;
-var playerSpeedupOffset = 10;
+var playerBaseSpeed = 5;
+var playerSpeedupRate = 0.03;
 var playerSpeed = 0;
 var playerRotationRate = 0.3;
 
 // cubes
 var cubes = [];
-var cubeCount = 10000;
+var cubeCount = 1000;
 var cubeColorCount = 5;
 var visibleRadius = 50;
 
-// test ring
-var torusRadius = 2.4; // length from center to center of tube
+// rings
+var rings = [];
+var ringCount = 100;
+var visibleRadius = 50;
+var torusRadius = 1.2; // length from center to center of tube
 var tubeRadius = 0.1; // radius of the tube
-var ringgeometry = new THREE.TorusGeometry(torusRadius, tubeRadius, 32, 100);
-var ringmaterial = new THREE.MeshBasicMaterial( { color: 0xffff00 } );
-var ring = new THREE.Mesh(ringgeometry, ringmaterial)
+var ringSpeedupOffset = 0;
+var ringSpeedupOffsetRate = 3;
 
 // speed tracker
 var infoText;
@@ -31,9 +32,9 @@ var infoText;
 var clock = new THREE.Clock();
 var time = 0;
 
-// shooter balls 
-var ammo = []; 
-var GRAVITY = new THREE.Vector3(0, -5, 0); 
+// shooter balls
+var ammo = [];
+var GRAVITY = new THREE.Vector3(0, -5, 0);
 
 // === MAIN CODE ===
 init();
@@ -44,6 +45,7 @@ function init() {
   initGraphics();
   initPlayer();
   initCubes();
+  initRings();
   initInput();
 }
 
@@ -54,7 +56,7 @@ function animate() {
 
 // initializes graphics variables
 function initGraphics() {
-  
+
   // camera
   camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
   camera.position.set(0, 0, 0);
@@ -67,7 +69,7 @@ function initGraphics() {
   renderer = new THREE.WebGLRenderer();
   renderer.setSize(window.innerWidth, window.innerHeight);
   document.body.appendChild(renderer.domElement);
-  
+
   // controls
   controls = new THREE.PlayerControls();
 
@@ -79,18 +81,19 @@ function initGraphics() {
 }
 
 function initPlayer() {
-  playerSpeed = playerSpeedupRate*Math.sqrt(playerSpeedupOffset + time) + playerBaseSpeed;
+  playerSpeed = playerSpeedupRate*(time - ringSpeedupOffset) + playerBaseSpeed;
   
   player.position = new THREE.Vector3(0, 0, 0);
   player.velocity = new THREE.Vector3(0, 0, playerSpeed);
   player.up = new THREE.Vector3(0, 1, 0);
-  player.object = new THREE.Mesh(new THREE.CubeGeometry(0.5, 0.5, 0.5), new THREE.MeshNormalMaterial());
+  player.size = 0.5;
+  player.object = new THREE.Mesh(new THREE.CubeGeometry(player.size, player.size, player.size), new THREE.MeshNormalMaterial());
   player.light = new THREE.PointLight(0xffffff, 1, 50, 2);
   player.light.position.set(0, 0, 0);
   
   scene.add(player.object);
   scene.add(player.light);
-  
+
   infoText = document.createElement('div');
   infoText.style.position = 'absolute';
   infoText.style.color = "white";
@@ -100,8 +103,37 @@ function initPlayer() {
   document.body.appendChild(infoText);
 }
 
+function initRings() {
+
+  // set up torus mesh
+  var ringgeometry = new THREE.TorusGeometry(torusRadius, tubeRadius, 32, 100);
+  var ringmaterial = new THREE.MeshBasicMaterial( { color: 0xffff00 } );
+
+  // TODO: randomize orientation of ring
+
+  // generate rings
+  for (var i = 0; i < ringCount; i++) {
+    var ring = new THREE.Mesh(ringgeometry, ringmaterial);
+
+    var R2 = visibleRadius*visibleRadius;
+    var x, y, z;
+    do {
+      x = (2*Math.random() - 1)*visibleRadius;
+      y = (2*Math.random() - 1)*visibleRadius;
+      z = (2*Math.random() - 1)*visibleRadius;
+    } while (x*x + y*y + z*z > R2);
+    ring.position.set(x, y, z);
+
+    ring.castShadow = true;
+    ring.receiveShadow = true;
+
+    scene.add(ring);
+    rings.push(ring);
+  }
+}
+
 function initCubes() {
-  
+
   // set up colors
   var geometry = new THREE.CubeGeometry(1, 1, 1);
   var materials = []
@@ -109,13 +141,13 @@ function initCubes() {
     var c = Math.floor(0xffffff*(Math.random() + 1)/2);
     materials.push(new THREE.MeshPhongMaterial({ color: c }));
   }
-  
+
   // generate cubes
   for (var i = 0; i < cubeCount; i++) {
     var index = Math.floor(materials.length*Math.random());
     var material = materials[index];
     var cube = new THREE.Mesh(geometry, material);
-    
+
     var R2 = visibleRadius*visibleRadius;
     var x, y, z;
     do {
@@ -140,13 +172,25 @@ function render() {
   // update scene
   updateSpeed();
   updateCubes(deltaTime);
+  updateRings(deltaTime);
   updatePlayer(deltaTime);
   updateCamera(deltaTime);
-  updateAmmoPhysics(deltaTime); 
+  updateAmmoPhysics(deltaTime);
   stats.update();
 
   // render!
   renderer.render(scene, camera);
+}
+
+function updateRings(deltaTime) {
+  var playerPosition = player.object.position;
+  for (var i = 0; i < rings.length; i++) {
+    var ring = rings[i];
+    if (playerPosition.distanceToSquared(ring.position) > visibleRadius*visibleRadius) {
+      ring.position.sub(playerPosition).normalize().multiplyScalar(-visibleRadius).add(playerPosition);
+    }
+    ring.lookAt(camera.position);
+  }
 }
 
 function updateCubes(deltaTime) {
@@ -162,10 +206,10 @@ function updateCubes(deltaTime) {
 // update the position and velocity of the player
 function updatePlayer(deltaTime) {
   var position = player.object.position.clone();
-  var velocity = player.velocity.clone();
+  var velocity = player.velocity.clone().setLength(playerSpeed);
   var up = player.up.clone();
   var right = velocity.clone().cross(up).normalize();
-  
+
   if (controls.moveUp) {
     velocity.addScaledVector(up, playerRotationRate).setLength(playerSpeed);
     up = right.clone().cross(velocity).normalize();
@@ -180,23 +224,36 @@ function updatePlayer(deltaTime) {
   if (controls.moveLeft) {
     velocity.addScaledVector(right, -playerRotationRate).setLength(playerSpeed);
   }
-  
-  
+
+  // change player speed if in ring
+
+  for (var i = 0; i < rings.length; i++) {
+    var ring = rings[i];
+    var playerPosition = player.object.position;
+    var ringPosition = ring.position;
+    if (playerPosition.distanceTo(ringPosition) <= torusRadius) {
+      ringSpeedupOffset += deltaTime*ringSpeedupOffsetRate;
+    }
+  }
+
+  //update speed tracker
+  infoText.innerHTML = "Player Speed: " + playerSpeed.toFixed(3);
+
   // Update the position using the changed delta
   player.object.position.addScaledVector(player.velocity, deltaTime);
   player.light.position.copy(player.object.position);
   player.velocity = velocity;
   player.up = up;
-  
+
   // make the player look at the camera
   player.object.up = player.up;
-  player.object.lookAt(camera.position.clone().addScaledVector(player.up, -2));
+  player.object.lookAt(camera.position.clone().addScaledVector(player.up, -1));
 }
 
 // moves the location of the camera
 function updateCamera(deltaTime) {
-  
-  var pos = player.object.position.clone().addScaledVector(player.velocity.clone().normalize(), -3).addScaledVector(player.up, 2);
+
+  var pos = player.object.position.clone().addScaledVector(player.velocity.clone().normalize(), -3).addScaledVector(player.up, 1);
   camera.position.copy(pos);
   camera.up.copy(player.up);
   camera.lookAt(player.object.position);
@@ -214,7 +271,7 @@ function updateSpeed() {
   // reduces speed if thru ring
   // if ( cube in ring)
   
-  playerSpeed = playerSpeedupRate*Math.sqrt(playerSpeedupOffset + time) + playerBaseSpeed;
+  playerSpeed = playerSpeedupRate*(time - ringSpeedupOffset) + playerBaseSpeed;
 
   // updates speedtracker
   infoText.innerHTML = "Player Speed: " + playerSpeed.toFixed(3);
@@ -235,7 +292,7 @@ window.addEventListener( 'mousedown', function( event ) {
     raycaster.setFromCamera( mouseCoords, camera);
     //console.log("raycaster " + raycaster.ray.direction.x + " " + raycaster.ray.direction.y + " " + raycaster.ray.direction.z);
     var direction = new THREE.Vector3(raycaster.ray.direction.x, raycaster.ray.direction.y, raycaster.ray.direction.z);
-    var origin = new THREE.Vector3(raycaster.ray.origin.x, raycaster.ray.origin.y, raycaster.ray.origin.z); 
+    var origin = new THREE.Vector3(raycaster.ray.origin.x, raycaster.ray.origin.y, raycaster.ray.origin.z);
 
     // Creates a ball and throws it
     var ballMass = 35;
@@ -246,24 +303,24 @@ window.addEventListener( 'mousedown', function( event ) {
     ball.castShadow = true;
     ball.receiveShadow = true;
 
-    ball.position.x = direction.x + origin.x; 
-    ball.position.y = direction.y + origin.y; 
-    ball.position.z = direction.z + origin.z; 
+    ball.position.x = direction.x + origin.x;
+    ball.position.y = direction.y + origin.y;
+    ball.position.z = direction.z + origin.z;
 
-    var offset = player.object.position.clone().sub(camera.position); 
-    ball.position.add(offset); 
+    var offset = player.object.position.clone().sub(camera.position);
+    ball.position.add(offset);
 
-    var velocity = new THREE.Vector3(direction.x, direction.y, direction.z);  
-    velocity.multiplyScalar(70); 
+    var velocity = new THREE.Vector3(direction.x, direction.y, direction.z);
+    velocity.multiplyScalar(70);
 
-    var newAmmo = new myAmmo(ball, velocity); 
-    
-    // MEL: hehe 
+    var newAmmo = new myAmmo(ball, velocity);
+
+    // MEL: hehe
     // newAmmo._l = new THREE.PointLight(0xffffff, 1, 50, 2);
     // newAmmo._l.position.copy(position);
     //scene.add(newAmmo._l);
-    scene.add(ball); 
-    ammo.push(newAmmo); 
+    scene.add(ball);
+    ammo.push(newAmmo);
 
   }, false );
 }
