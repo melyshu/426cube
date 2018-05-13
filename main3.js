@@ -14,6 +14,16 @@ var cubeCount = 10000;
 var cubeColorCount = 5;
 var visibleRadius = 50;
 
+// test ring
+var torusRadius = 2.4; // length from center to center of tube
+var tubeRadius = 0.1; // radius of the tube
+var ringgeometry = new THREE.TorusGeometry(torusRadius, tubeRadius, 32, 100);
+var ringmaterial = new THREE.MeshBasicMaterial( { color: 0xffff00 } );
+var ring = new THREE.Mesh(ringgeometry, ringmaterial)
+
+// speed tracker
+var infoText;
+
 // clock
 var clock = new THREE.Clock();
 var time = 0;
@@ -76,6 +86,14 @@ function initPlayer() {
   
   scene.add(player.object);
   scene.add(player.light);
+  
+  infoText = document.createElement('div');
+  infoText.style.position = 'absolute';
+  infoText.style.color = "white";
+  infoText.innerHTML = "Player Speed:" + player.velocity.length(); // tracks speed of player
+  infoText.style.top = 12 + 'px';
+  infoText.style.right = 12 + 'px';
+  document.body.appendChild(infoText);
 }
 
 function initCubes() {
@@ -124,6 +142,7 @@ function render() {
   updateCamera(deltaTime);
   updateAmmoPhysics(deltaTime); 
   stats.update();
+  updateSpeed();
 
   // render!
   renderer.render(scene, camera);
@@ -202,6 +221,14 @@ function updateAmmoPhysics(deltaTime) {
   }
 }
 
+function updateSpeed() {
+  // reduces speed if thru ring
+  // if ( cube in ring)
+
+  // updates speedtracker
+  infoText.innerHTML = "Player Speed:" + player.velocity.length();
+}
+
 function initInput() {
 window.addEventListener( 'mousedown', function( event ) {
 
@@ -248,5 +275,4 @@ window.addEventListener( 'mousedown', function( event ) {
     ammo.push(newAmmo); 
 
   }, false );
-
 }
