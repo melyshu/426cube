@@ -2,7 +2,7 @@ myAmmo = function(mesh, velocity, index) {
 	this.mesh = mesh; 
 	this.velocity = velocity; 
 	this.position = mesh.position.clone(); 
-	this.index = index; // index of ammo in 
+	this.alive = true; 
 }
 
 myAmmo.prototype = {
@@ -10,7 +10,10 @@ myAmmo.prototype = {
 
 }
 
-myAmmo.triggerCollision = function(mesh) {
+myAmmo.updatePosition = function(position) {
+	this.position = position; 
+}
 
-	mesh.material.color = new THREE.Color(0xff0000); 
+myAmmo.kill = function() {
+	this.alive = false; 
 }

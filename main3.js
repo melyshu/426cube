@@ -1,60 +1,57 @@
-// graphics global variables
-var camera, scene, renderer, controls;
-var stats; // fps counter
+// === GLOBAL VARIABLES ===
 
-// grid global variables
-var gridRegions = []; // regions of space that do stuff
-var gridCount = 5;   // region partitions per side
-var gridSize = 15;   // sidelength of region cube
-var gridDensity = 15;  // number of objects per region
+// graphics
+var camera, scene, renderer, controls, stats;
 
-var objectsToGenerate = []; // a queue for objects to be created
-var maxGenerationsPerFrame = 150; // max number of objects to be generated per frame
-
-var objectsToRemove = []; // a queue for objects to be removed
-var maxRemovalsPerFrame = 150; // max number of objects to be removed per frame
-
-// player global variables
-var player = {
-  position: new THREE.Vector3(0, 0, 0),
-  velocity: new THREE.Vector3(0, 0, 10),
-  up: new THREE.Vector3(0, 1, 0),
-  object: new THREE.Mesh(new THREE.CubeGeometry(0.5, 0.5, 0.5), new THREE.MeshNormalMaterial())
-};
+// player
+var player = {};
+var playerSpeed = 10;
 var playerRotationRate = 0.03;
 
-// BEGIN misc sandbox global variables
-var geometry = new THREE.CubeGeometry(1, 1, 1);
-var materials = []
-for (var i = 0; i < 5; i++) {
-  var c = Math.floor(0xffffff*(Math.random() + 1)/2);
-  materials.push(new THREE.MeshPhongMaterial({ color: c }));
-}
+// cubes
+var cubes = [];
+var cubeCount = 10000;
+var cubeColorCount = 5;
+var visibleRadius = 50;
 
-var light;
+// test ring
+var torusRadius = 2.4; // length from center to center of tube
+var tubeRadius = 0.1; // radius of the tube
+var ringgeometry = new THREE.TorusGeometry(torusRadius, tubeRadius, 32, 100);
+var ringmaterial = new THREE.MeshBasicMaterial( { color: 0xffff00 } );
+var ring = new THREE.Mesh(ringgeometry, ringmaterial)
 
-var SPEED = 15;
+// speed tracker
+var infoText;
 
-// END misc sandbox global variables
-
-// time variables
+// clock
 var clock = new THREE.Clock();
 var time = 0;
 
 // shooter balls 
 var ammo = []; 
 var GRAVITY = new THREE.Vector3(0, -5, 0); 
-// - Main code -
 
+// graphics light 
+var lightEffect = {}; 
+var lights = []; 
+
+// sound effect
+var boomSound; 
+
+// === MAIN CODE ===
 init();
 animate();
 
-// - Functions -
-
+// === FUNCTIONS ===
 function init() {
   initGraphics();
-  initGrid();
-  initInput(); 
+  initPlayer();
+  initCubes();
+  initInput();
+
+  //boomSound = new sound("effects/boom.wav"); 
+  boomSound = new Audio("effects/boom.mp3"); 
 }
 
 function animate() {
@@ -64,45 +61,82 @@ function animate() {
 
 // initializes graphics variables
 function initGraphics() {
+  
+  // camera
   camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
   camera.position.set(0, 0, 0);
 
+  // scene
   scene = new THREE.Scene();
+  // scene.add(new THREE.AmbientLight(0x707070)); // MEL: base light for debugging?
 
-  var ambientLight = new THREE.AmbientLight( 0x707070 );
-  //scene.add( ambientLight );
-
+  // renderer
   renderer = new THREE.WebGLRenderer();
   renderer.setSize(window.innerWidth, window.innerHeight);
   document.body.appendChild(renderer.domElement);
+  
+  // controls
+  controls = new THREE.PlayerControls();
 
+  // stats
   stats = new Stats();
   stats.domElement.style.position = 'absolute';
   stats.domElement.style.top = '0px';
   document.body.appendChild( stats.domElement );
-
-  controls = new THREE.PlayerControls();
-
-  light = new THREE.PointLight(0xffffff, 1, 50, 2);
-  light.position.set(0, 0, 0);
-  scene.add(light);
-
-  scene.add(player.object);
 }
 
-// initialize grid
-function initGrid() {
-  for (var i = 0; i < gridCount; i++) {
-    for (var j = 0; j < gridCount; j++) {
-      for (var k = 0; k < gridCount; k++) {
-        gridRegions[gridIndex(i, j, k)] = {
-          x: NaN,
-          y: NaN,
-          z: NaN,
-          objects: []
-        }
-      }
-    }
+function initPlayer() {
+  player.position = new THREE.Vector3(0, 0, 0);
+  player.velocity = new THREE.Vector3(0, 0, playerSpeed);
+  player.up = new THREE.Vector3(0, 1, 0);
+  player.object = new THREE.Mesh(new THREE.CubeGeometry(0.5, 0.5, 0.5), new THREE.MeshNormalMaterial());
+  player.light = new THREE.PointLight(0xffffff, 1, 50, 2);
+  player.light.position.set(0, 0, 0);
+  player.light.castShadow = true;
+  
+  scene.add(player.object);
+  scene.add(player.light);
+  
+  infoText = document.createElement('div');
+  infoText.style.position = 'absolute';
+  infoText.style.color = "white";
+  infoText.innerHTML = "Player Speed:" + player.velocity.length(); // tracks speed of player
+  infoText.style.top = 12 + 'px';
+  infoText.style.right = 12 + 'px';
+  document.body.appendChild(infoText);
+}
+
+
+function initCubes() {
+  
+  // set up colors
+  var geometry = new THREE.CubeGeometry(1, 1, 1);
+  var materials = []
+  for (var i = 0; i < cubeColorCount; i++) {
+    var c = Math.floor(0xffffff*(Math.random() + 1)/2);
+    materials.push(new THREE.MeshPhongMaterial({ color: c }));
+  }
+  
+  // generate cubes
+  for (var i = 0; i < cubeCount; i++) {
+    var index = Math.floor(materials.length*Math.random());
+    var material = materials[index];
+    var cube = new THREE.Mesh(geometry, material);
+    
+    var R2 = visibleRadius*visibleRadius;
+    var x, y, z;
+    do {
+      x = (2*Math.random() - 1)*visibleRadius;
+      y = (2*Math.random() - 1)*visibleRadius;
+      z = (2*Math.random() - 1)*visibleRadius;
+    } while (x*x + y*y + z*z > R2);
+    cube.position.set(x, y, z);
+    
+    cube.castShadow = true;
+    cube.receiveShadow = true;
+    
+    scene.add(cube);
+    cubes.push(cube);
   }
 }
 
@@ -114,194 +148,24 @@ function render() {
   time += deltaTime;
 
   // update scene
-  updateObjects(deltaTime);
+  updateCubes(deltaTime);
   updatePlayer(deltaTime);
   updateCamera(deltaTime);
   updateAmmoPhysics(deltaTime); 
   stats.update();
+  updateSpeed();
 
   // render!
   renderer.render(scene, camera);
 }
 
-// generates and deletes objects as required
-function updateObjects(deltaTime) {
-  var gridX = Math.round(player.object.position.x/gridSize);
-  var gridY = Math.round(player.object.position.y/gridSize);
-  var gridZ = Math.round(player.object.position.z/gridSize);
 
-  updateGridRegions(gridX, gridY, gridZ);
-  generateObjects(deltaTime);
-  removeObjects(deltaTime);
-  
-  light.position.set(player.object.position.x, player.object.position.y, player.object.position.z);
-}
-
-// gets current grid region index
-function getCurrGrid(position) {
-  var gridX = Math.round(position.x/gridSize);
-  var gridY = Math.round(position.y/gridSize);
-  var gridZ = Math.round(position.z/gridSize);
-  return gridIndex(gridX, gridY, gridZ); 
-}
-
-// moves the location of the camera
-function updateCamera(deltaTime) {
-  
-  var pos = player.object.position.clone().sub(player.velocity.clone().normalize().multiplyScalar(3.0)).addScaledVector(player.up, 2);
-  camera.up.set(player.up.x, player.up.y, player.up.z);
-  camera.position.set(pos.x, pos.y, pos.z);
-  camera.lookAt(player.object.position);
-  //camera.
-  // @ALICE: something?
-  // controls.update(deltaTime);
-  //camera.position.z -= SPEED*deltaTime;
-}
-
-// returns the positive remainder of n divided by k
-function posMod(n, k) {
-  return ((n % k) + k) % k;
-}
-
-// returns the index in gridRegions for the gridRegion indexed by (x, y, z)
-function gridIndex(x, y, z) {
-  var i = (posMod(x, gridCount)* gridCount + posMod(y, gridCount))* gridCount + posMod(z, gridCount);
-  return i;
-}
-
-// returns whether this gridRegion index is still near the camera
-function gridIsValid(x, y, z) {
-  var gridX = Math.round(player.object.position.x/gridSize);
-  var gridY = Math.round(player.object.position.y/gridSize);
-  var gridZ = Math.round(player.object.position.z/gridSize);
-  var halfGridCount = Math.floor(gridCount/2);
-
-  return !(
-    x < gridX - halfGridCount || gridX + halfGridCount < x ||
-    y < gridY - halfGridCount || gridY + halfGridCount < y ||
-    z < gridZ - halfGridCount || gridZ + halfGridCount < z
-  );
-}
-
-// creates some objects from objectsToGenerate
-function generateObjects(deltaTime) {
-
-  if (objectsToGenerate.length <= 0) return;
-
-  objectsToGenerate.unshift({ count: 0 });
-  var entry = { count: 0 };
-  var x = NaN;
-  var y = NaN;
-  var z = NaN;
-  var gridRegion = gridRegions[gridIndex(x, y, z)];
-
-  var count = 0;
-  var maxToUpdate = gridCount*gridCount*gridDensity;
-  var progressToUpdate = deltaTime*SPEED/gridSize;
-  var total = maxGenerationsPerFrame; // Math.max(maxToUpdate*progressToUpdate*1.1, maxGenerationsPerFrame); // tried dynamically adjusting to speed
-  while (count < total) {
-
-    // go to next entry if no more
-    if (entry.count <= 0) {
-
-      // discard entries that are no longer relevant
-      do {
-        objectsToGenerate.shift();
-        if (objectsToGenerate.length <= 0) return;
-        entry = objectsToGenerate[0];
-      } while (!gridIsValid(entry.x, entry.y, entry.z));
-
-      x = entry.x;
-      y = entry.y;
-      z = entry.z;
-      gridRegion = gridRegions[gridIndex(x, y, z)];
-      continue;
-    }
-
-    // generate random cube
-    var index = Math.floor(materials.length*Math.random());
-    var material = materials[index];
-    var cube = new THREE.Mesh(geometry, material);
-    cube.position.set(
-      x*gridSize + (Math.random() - 0.5)*gridSize,
-      y*gridSize + (Math.random() - 0.5)*gridSize,
-      z*gridSize + (Math.random() - 0.5)*gridSize,
-    );
-
-    // update
-    scene.add(cube);
-    gridRegion.objects.push(cube);
-    entry.count--;
-    count++;
-  }
-}
-
-// removes some objects from objectsToRemove
-function removeObjects(deltaTime) {
-  var count = 0;
-  var maxToUpdate = gridCount*gridCount*gridDensity;
-  var progressToUpdate = deltaTime*SPEED/gridSize;
-  var total = maxRemovalsPerFrame; // Math.max(maxToUpdate*progressToUpdate*1.1, maxRemovalsPerFrame); // tried dynamically adjusting to speed
-  while (count < total && objectsToRemove.length > 0) {
-    scene.remove(objectsToRemove.shift());
-    count++;
-  }
-}
-
-// updates the grid given the current grid indices
-function updateGridRegions(gridX, gridY, gridZ) {
-
-  // initialize queue
-  var halfGridCount = Math.floor(gridCount/2);
-  var queue = [{ x: gridX, y: gridY, z: gridZ }];
-  queue.push({ x: gridX+halfGridCount, y: gridY, z: gridZ });
-  queue.push({ x: gridX-halfGridCount, y: gridY, z: gridZ });
-  queue.push({ x: gridX, y: gridY+halfGridCount, z: gridZ });
-  queue.push({ x: gridX, y: gridY-halfGridCount, z: gridZ });
-  queue.push({ x: gridX, y: gridY, z: gridZ+halfGridCount });
-  queue.push({ x: gridX, y: gridY, z: gridZ-halfGridCount });
-
-  while (queue.length > 0) {
-    var queueXYZ = queue.shift();
-    var qX = queueXYZ.x;
-    var qY = queueXYZ.y;
-    var qZ = queueXYZ.z;
-
-    // ignore if out of bounds
-    if (!gridIsValid(qX, qY, qZ)) continue;
-
-    // update if necessary
-    var gridRegion = gridRegions[gridIndex(qX, qY, qZ)];
-    if (gridRegion.x !== qX || gridRegion.y !== qY || gridRegion.z !== qZ) {
-
-      // remove old region
-      for (var i = 0; i < gridRegion.objects.length; i++) {
-        objectsToRemove.push(gridRegion.objects[i]);
-      }
-
-      // create new region
-      gridRegions[gridIndex(qX, qY, qZ)] = {
-        x: qX,
-        y: qY,
-        z: qZ,
-        objects: []
-      };
-
-      // send generation request
-      objectsToGenerate.push({
-        x: qX,
-        y: qY,
-        z: qZ,
-        count: gridDensity
-      });
-
-      // search neighbors
-      queue.push({ x: qX+1, y: qY  , z: qZ   });
-      queue.push({ x: qX-1, y: qY  , z: qZ   });
-      queue.push({ x: qX  , y: qY+1, z: qZ   });
-      queue.push({ x: qX  , y: qY-1, z: qZ   });
-      queue.push({ x: qX  , y: qY  , z: qZ+1 });
-      queue.push({ x: qX  , y: qY  , z: qZ-1 });
+function updateCubes(deltaTime) {
+  var playerPosition = player.object.position;
+  for (var i = 0; i < cubes.length; i++) {
+    var cube = cubes[i];
+    if (playerPosition.distanceToSquared(cube.position) > visibleRadius*visibleRadius) {
+      cube.position.sub(playerPosition).normalize().multiplyScalar(-visibleRadius).add(playerPosition);
     }
   }
 }
@@ -345,6 +209,7 @@ function updatePlayer(deltaTime) {
   
   // Update the position using the changed delta
   player.object.position.addScaledVector(player.velocity, deltaTime);
+  player.light.position.copy(player.object.position);
   
   // make the player look at the camera
   player.object.up = player.up;
@@ -357,28 +222,34 @@ function updatePlayer(deltaTime) {
   }
 }
 
+// moves the location of the camera
+function updateCamera(deltaTime) {
+  
+  var pos = player.object.position.clone().addScaledVector(player.velocity.clone().normalize(), -3).addScaledVector(player.up, 2);
+  camera.position.copy(pos);
+  camera.up.copy(player.up);
+  camera.lookAt(player.object.position);
+}
+
 function updateAmmoPhysics(deltaTime) {
 
-  var ammoToRemove = []; 
   for (var i = 0; i < ammo.length; i++) {
-    ammo[i].mesh.position.add(ammo[i].velocity.clone().multiplyScalar(deltaTime));
 
-    // remove ammo in irrelevant grids
-    var gridIndex = getCurrGrid(ammo[i].mesh.position); 
-    // if (!gridIsValid(gridIndex)) {
-    //   scene.remove(ammo[i]); 
-    //   ammo.shift(); 
-    // }
+    if (!ammo[i].alive)
+      continue; 
+
+    ammo[i].mesh.position.add(ammo[i].velocity.clone().multiplyScalar(deltaTime));
+    if (player.position.distanceToSquared(ammo[i].mesh.position) > 50*visibleRadius*visibleRadius)
+      ammo[i].alive = false; 
 
     // check for collisions with cubes
     if (checkCollision(ammo[i].mesh)) {
-      ammoToRemove.push(ammo[i]); 
-      myAmmo.triggerCollision(ammo[i].mesh); 
-      scene.remove(ammo[i]); 
+      boomSound.play(); 
+      //triggerCollision(ammo[i].mesh); 
     }
-
    // ammo[i]._l.position.copy(ammo[i].mesh.position);
   }
+
 }
 
 // checks if collision with any cubes with mesh 
@@ -386,23 +257,41 @@ function checkCollision(mesh) {
 
  var meshBBox = new THREE.Box3().setFromObject(mesh);  
 
-  for (var j = 0; j < gridRegions.length; j++) {
-    var cubes = gridRegions[j].objects; 
-    var numObjects = cubes.length; 
+for (var i = 0; i < cubes.length; i++) {
+  cubes[i].geometry.computeBoundingBox(); 
+  var min = cubes[i].position.clone().sub(new THREE.Vector3(0.5, 0.5, 0.5));  
+  var max = cubes[i].position.clone().add(new THREE.Vector3(0.5, 0.5, 0.5));  
+  var box = new THREE.Box3(min, max); 
 
-    for (var i = 0; i < numObjects; i++) {
-      cubes[i].geometry.computeBoundingBox(); 
-      var min = cubes[i].position.clone().sub(new THREE.Vector3(0.5, 0.5, 0.5));  
-      var max = cubes[i].position.clone().add(new THREE.Vector3(0.5, 0.5, 0.5));  
-      var box = new THREE.Box3(min, max); 
-
-      if (box.intersectsBox(meshBBox)) {
-        myAmmo.triggerCollision(mesh); 
-        scene.remove(cubes[i]); 
-        return true; 
-      }
-    }
+  if (box.intersectsBox(meshBBox)) {
+    //triggerCubeCollision(mesh); 
+    var playerPosition = player.object.position;
+    cubes[i].position.sub(playerPosition).normalize().multiplyScalar(-visibleRadius).add(playerPosition);
+    return true; 
   }
+}
+}
+
+function triggerCubeCollision(mesh) {
+  var newLight = new THREE.PointLight(0xffffff, 1, 100, 2); 
+  newLight.position.set(mesh.position); 
+
+  lights.push({
+    light:newLight, 
+    lifetime:time, 
+    }
+  )
+  
+  scene.add(newLight); 
+
+}
+
+function updateSpeed() {
+  // reduces speed if thru ring
+  // if ( cube in ring)
+
+  // updates speedtracker
+  infoText.innerHTML = "Player Speed:" + player.velocity.length();
 }
 
 function initInput() {
@@ -451,5 +340,4 @@ window.addEventListener( 'mousedown', function( event ) {
     ammo.push(newAmmo); 
 
   }, false );
-
 }
