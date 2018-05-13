@@ -39,6 +39,9 @@ var GRAVITY = new THREE.Vector3(0, -5, 0);
 // graphics light 
 var lightEffect = {}; 
 var lights = []; 
+var engine; 
+var textures = {};  
+var fog; 
 
 // sound effect
 var boomSound; 
@@ -54,14 +57,32 @@ function init() {
   initCubes();
   initRings();
   initInput();
-
-  //boomSound = new sound("effects/boom.wav"); 
+  initEngine(); 
   boomSound = new Audio("effects/boom.mp3"); 
+
+}
+
+function initEngine() {
+  engine = new ParticleEngine();
+
+  var loader = new THREE.TextureLoader(); 
+  fireTexture = loader.load("effects/fire.png"); 
+  textures.fire = fireTexture; 
+  lightTexture = loader.load("effects/light2.png"); 
+  textures.light = lightTexture;  
+  laserTexture = loader.load("effects/laser.png"); 
+  textures.laser = laserTexture; 
+
+  // var color = new THREE.Color(0.5, 0.5, 0.5); // gray for now
+  // fog = new THREE.FogExp2(color, 0.1); 
+  // fog.density = 0.1; 
+  // scene.fog = fog; 
 }
 
 function animate() {
-  render();
   requestAnimationFrame(animate);
+  render();
+
 }
 
 // initializes graphics variables
@@ -186,6 +207,7 @@ function render() {
   updatePlayer(deltaTime);
   updateCamera(deltaTime);
   updateAmmoPhysics(deltaTime);
+  engine.update(deltaTime); 
   stats.update();
 
   // render!
@@ -195,7 +217,7 @@ function render() {
 function updateRings(deltaTime) {
   var playerPosition = player.object.position;
   var playerToCamera = camera.position.clone().sub(player.object.position).normalize();
-  console.log(playerToCamera.length());
+
   for (var i = 0; i < rings.length; i++) {
     var ring = rings[i];
     if (playerPosition.distanceToSquared(ring.position) > visibleRadius*visibleRadius) {
@@ -262,10 +284,10 @@ function updatePlayer(deltaTime) {
   player.object.up = player.up;
 
   // check for player collision with cube
-  if (checkCollision(player.object)) {
-    console.log("player collision"); 
-   // player.object.
-  }
+  // if (checkCollision(player.object)) {
+  //   console.log("player collision"); 
+  //  // player.object.
+  //}
 
   player.object.lookAt(camera.position.clone().addScaledVector(player.up, -1));
 }
@@ -287,51 +309,51 @@ function updateAmmoPhysics(deltaTime) {
       continue; 
 
     ammo[i].mesh.position.add(ammo[i].velocity.clone().multiplyScalar(deltaTime));
-    if (player.position.distanceToSquared(ammo[i].mesh.position) > 50*visibleRadius*visibleRadius)
-      ammo[i].alive = false; 
+    if (player.position.distanceToSquared(ammo[i].mesh.position) > visibleRadius*visibleRadius) {
+      //killObject(ammo[i]); 
+      //console.log("killing ammo"); 
+    }
 
     // check for collisions with cubes
-    if (checkCollision(ammo[i].mesh)) {
-      boomSound.play(); 
-      //triggerCollision(ammo[i].mesh); 
+    if (handleCubeCollision(ammo[i].mesh)) { 
+      ammo[i].mesh.material.transparent = true; 
+      ammo[i].mesh.material.opacity = 0.0; 
     }
+    //killObject(ammo[i].mesh); 
    // ammo[i]._l.position.copy(ammo[i].mesh.position);
   }
 
 }
+function killObject(object) {
+  scene.remove(object); 
+  object.alive = false; 
+  object.position = new THREE.Vector3(-1e9); 
+}
 
 // checks if collision with any cubes with mesh 
-function checkCollision(mesh) {
+function handleCubeCollision(mesh) {
 
  var meshBBox = new THREE.Box3().setFromObject(mesh);  
 
 for (var i = 0; i < cubes.length; i++) {
   cubes[i].geometry.computeBoundingBox(); 
-  var min = cubes[i].position.clone().sub(new THREE.Vector3(0.5, 0.5, 0.5));  
-  var max = cubes[i].position.clone().add(new THREE.Vector3(0.5, 0.5, 0.5));  
+  var halfdiag = Math.sqrt(3)/2.0; 
+  var min = cubes[i].position.clone().sub(new THREE.Vector3(halfdiag, halfdiag, halfdiag));  
+  var max = cubes[i].position.clone().add(new THREE.Vector3(halfdiag, halfdiag, halfdiag));  
   var box = new THREE.Box3(min, max); 
 
-  if (box.intersectsBox(meshBBox)) {
-    //triggerCubeCollision(mesh); 
-    var playerPosition = player.object.position;
-    cubes[i].position.sub(playerPosition).normalize().multiplyScalar(-visibleRadius).add(playerPosition);
-    return true; 
-  }
-}
-}
+    if (box.intersectsBox(meshBBox)) {
+      var playerPosition = player.object.position;
+      cubes[i].position.sub(playerPosition).normalize().multiplyScalar(-visibleRadius).add(playerPosition);
+      
+      boomSound.play(); 
 
-function triggerCubeCollision(mesh) {
-  var newLight = new THREE.PointLight(0xffffff, 1, 100, 2); 
-  newLight.position.set(mesh.position); 
-
-  lights.push({
-    light:newLight, 
-    lifetime:time, 
+      // origin, velocity, color, opacity, num, texture
+      engine.createParticleCluster(mesh.position, 10, new THREE.Color(0xff0000), 0.8, 100, textures.fire); 
+      return true; 
     }
-  )
-  
-  scene.add(newLight); 
-
+  }
+  return false;
 }
 
 function updateSpeed() {
@@ -363,10 +385,10 @@ window.addEventListener( 'mousedown', function( event ) {
 
     // Creates a ball and throws it
     var ballMass = 35;
-    var ballRadius = 1;
-    var ballMaterial = new THREE.MeshPhongMaterial( { color: 0xffffff } );
+    var ballRadius = 0.4;
+    var ballMaterial = new THREE.MeshPhongMaterial( { color: 0xe0ffff, map: textures.laser, opacity: 0.8 } );
 
-    var ball = new THREE.Mesh( new THREE.SphereBufferGeometry( ballRadius, 14, 10 ), ballMaterial );
+    var ball = new THREE.Mesh( new THREE.SphereBufferGeometry( ballRadius, 9, 3 ), ballMaterial );
     ball.castShadow = true;
     ball.receiveShadow = true;
 
@@ -378,17 +400,12 @@ window.addEventListener( 'mousedown', function( event ) {
     ball.position.add(offset);
 
     var velocity = new THREE.Vector3(direction.x, direction.y, direction.z);  
-    velocity.multiplyScalar(40); 
+    velocity.multiplyScalar(40 + 1.5*playerSpeed); 
 
     var newAmmo = new myAmmo(ball, velocity, ammo.length); 
-    
-    // MEL: hehe 
-
-    // newAmmo._l = new THREE.PointLight(0xffffff, 1, 50, 2);
-    // newAmmo._l.position.copy(position);
-    //scene.add(newAmmo._l);
     scene.add(ball);
     ammo.push(newAmmo);
+
 
   }, false );
 }
