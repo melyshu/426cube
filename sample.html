@@ -1,0 +1,97 @@
+<html>
+<html>
+ <head>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/92/three.min.js"></script>
+  <script src="js/controls/OrbitControls.js"></script>
+  <script src="effects/ParticleEngine.js"></script>
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+     
+  <script type="text/javascript">
+      
+   $(function() {
+    
+    //scene
+    scene = new THREE.Scene();
+    //camera
+    var camera = new THREE.PerspectiveCamera( 45, window.innerWidth / window.innerHeight, 0.1, 1000 );
+    camera.position.set(0,-13,5);
+    camera.lookAt(new THREE.Vector3( 0, 5, 0 ));
+     
+    //renderer
+    var renderer = new THREE.WebGLRenderer();
+    renderer.setSize( window.innerWidth, window.innerHeight );
+ 
+    //controls
+    var controls = new THREE.OrbitControls( camera, renderer.domElement );
+       
+    //show canvas
+    $("#canvas-container").html(renderer.domElement);
+     
+     
+ //directional light
+ var directionalLight = new THREE.DirectionalLight(0xffffff);
+ directionalLight.position.set(6, 0, 6);
+ scene.add(directionalLight);
+  
+    //plane
+    var geometry = new THREE.PlaneGeometry(20, 20);
+    var material = new THREE.MeshLambertMaterial( { color: 0x555555 } );
+    var plane = new THREE.Mesh( geometry, material );
+    scene.add(plane);
+     
+     
+ //particle
+     
+    //rain
+    var settings = {
+      positionStyle    : Type.CUBE,
+      positionBase     : new THREE.Vector3( 0, 0, 10 ),
+      positionSpread   : new THREE.Vector3( 20, 20, 0 ),
+ 
+      velocityStyle    : Type.CUBE,
+      velocityBase     : new THREE.Vector3( 0, 0, -50 ),
+      velocitySpread   : new THREE.Vector3( 5, 5, 0 ), 
+      accelerationBase : new THREE.Vector3( 100, 0, 0 ),
+       
+      particleTexture : THREE.ImageUtils.loadTexture( 'images/raindrop2flip.png' ),
+ 
+      sizeBase    : 0.4,
+      sizeSpread  : 0.1,
+      colorBase   : new THREE.Vector3(0.66, 1.0, 0.7), // H,S,L
+      colorSpread : new THREE.Vector3(0.00, 0.0, 0.2),
+      opacityBase : 0.6,
+ 
+      particlesPerSecond : 5000,
+      particleDeathAge   : 1.0,  
+      emitterDeathAge    : 60
+     };
+     
+        engine = new ParticleEngine();
+ engine.setValues( settings );
+ engine.initialize();
+     
+     
+   
+    //render scene
+    var render = function () {
+     requestAnimationFrame(render);
+     renderer.render(scene, camera);
+      
+     engine.update( 0.01 * 0.5 );
+    };
+       
+    render();
+     
+     
+       
+   });
+      
+  </script>
+     
+ </head>
+ <body style="background: black">
+     
+  <div id="canvas-container" style="position: absolute; left:0px; top:0px"></div>
+     
+ </body>
+</html>

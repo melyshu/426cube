@@ -36,9 +36,12 @@ var time = 0;
 var ammo = [];
 var GRAVITY = new THREE.Vector3(0, -5, 0);
 
-// graphics light 
-var lightEffect = {}; 
-var lights = []; 
+// graphics stuff
+var engine; 
+var textures = {}; 
+var myMaterials = {}; 
+var fog; 
+var texture_placeholder;
 
 // sound effect
 var boomSound; 
@@ -50,18 +53,72 @@ animate();
 // === FUNCTIONS ===
 function init() {
   initGraphics();
+  initTextures(); 
   initPlayer();
   initCubes();
   initRings();
   initInput();
-
-  //boomSound = new sound("effects/boom.wav"); 
+  initEngine(); 
   boomSound = new Audio("effects/boom.mp3"); 
+
+}
+
+function initEngine() {
+  engine = new ParticleEngine();
+}
+
+function initTextures() {
+
+  var loader = new THREE.TextureLoader(); 
+  fireTexture = loader.load("effects/fire.png"); 
+  textures.fire = fireTexture; 
+  lightTexture = loader.load("effects/light2.png"); 
+  textures.light = lightTexture;  
+  laserTexture = loader.load("effects/laser.png"); 
+  textures.laser = laserTexture; 
+
+  var ddsLoader = new THREE.DDSLoader(); 
+  var map4 = ddsLoader.load( 'textures/explosion_dxt5_mip.dds' );
+  map4.anisotropy = 4;
+  myMaterials.fire = new THREE.MeshBasicMaterial( { map: map4, side: THREE.DoubleSide, blending: THREE.AdditiveBlending, depthTest: false, transparent: true } );
+
+  myMaterials.cloud = new THREE.MeshBasicMaterial( {
+        map: loader.load( 'textures/cloud.png' ),
+        depthTest: false,
+        transparent: true,
+        opacity: 0.8,
+        side: THREE.DoubleSide
+      } );
+
+  var materials = [
+
+    loadTexture( 'textures/skybox/px.jpg' ), // right
+    loadTexture( 'textures/skybox/nx.jpg' ), // left
+    loadTexture( 'textures/skybox/py.jpg' ), // top
+    loadTexture( 'textures/skybox/ny.jpg' ), // bottom
+    loadTexture( 'textures/skybox/pz.jpg' ), // back
+    loadTexture( 'textures/skybox/nz.jpg' )  // front
+
+  ];
+  myMaterials.skybox = materials; 
+
+  materials = [
+
+    loadTexture( 'textures/MilkyWay/dark-s_nx.jpg' ), // right
+    loadTexture( 'textures/MilkyWay/dark-s_ny.jpg' ), // left
+    loadTexture( 'textures/MilkyWay/dark-s_nz.jpg' ), // top
+    loadTexture( 'textures/MilkyWay/dark-s_px.jpg' ), // bottom
+    loadTexture( 'textures/MilkyWay/dark-s_py.jpg' ), // back
+    loadTexture( 'textures/MilkyWay/dark-s_pz.jpg' )  // front
+
+  ];
+  myMaterials.milkyway = materials;
 }
 
 function animate() {
-  render();
   requestAnimationFrame(animate);
+  render();
+
 }
 
 // initializes graphics variables
@@ -74,6 +131,32 @@ function initGraphics() {
   // scene
   scene = new THREE.Scene();
   // scene.add(new THREE.AmbientLight(0x707070)); // MEL: base light for debugging?
+
+  // background 
+  texture_placeholder = document.createElement( 'canvas' );
+  texture_placeholder.width = 128;
+  texture_placeholder.height = 128;
+  var context = texture_placeholder.getContext( '2d' );
+  context.fillStyle = 'rgb( 200, 200, 200 )';
+  context.fillRect( 0, 0, texture_placeholder.width, texture_placeholder.height );
+
+  var container = document.getElementById( 'container' );
+  var geometry = new THREE.BoxGeometry( 300, 300, 300, 7, 7, 7 );
+  geometry.scale( - 1, 1, 1 );
+
+materials = [
+
+    loadTexture( 'textures/MilkyWay/dark-s_nx.jpg' ), // right
+    loadTexture( 'textures/MilkyWay/dark-s_ny.jpg' ), // left
+    loadTexture( 'textures/MilkyWay/dark-s_nz.jpg' ), // top
+    loadTexture( 'textures/MilkyWay/dark-s_px.jpg' ), // bottom
+    loadTexture( 'textures/MilkyWay/dark-s_py.jpg' ), // back
+    loadTexture( 'textures/MilkyWay/dark-s_pz.jpg' )  // front
+
+  ];
+
+  mesh = new THREE.Mesh( geometry, materials );
+  scene.add( mesh );
 
   // renderer
   renderer = new THREE.WebGLRenderer();
@@ -90,6 +173,23 @@ function initGraphics() {
   document.body.appendChild( stats.domElement );
 }
 
+function loadTexture( path ) {
+
+  var texture = new THREE.Texture( texture_placeholder );
+  var material = new THREE.MeshBasicMaterial( { map: texture, overdraw: 0.5 } );
+
+  var image = new Image();
+  image.onload = function () {
+
+    texture.image = this;
+    texture.needsUpdate = true;
+
+  };
+  image.src = path;
+
+  return material;
+
+}
 function initPlayer() {
   playerSpeed = playerSpeedupRate*(time - ringSpeedupOffset) + playerBaseSpeed;
   
@@ -157,7 +257,14 @@ function initCubes() {
   for (var i = 0; i < cubeCount; i++) {
     var index = Math.floor(materials.length*Math.random());
     var material = materials[index];
-    var cube = new THREE.Mesh(geometry, material);
+
+    var rand = Math.random(); 
+    var randMat;
+    if (rand > 0.5)
+      randMat = myMaterials.fire; 
+    else
+      randMat =  myMaterials.cloud;
+    var cube = new THREE.Mesh(geometry, myMaterials.fire);
 
     var R2 = visibleRadius*visibleRadius;
     var x, y, z;
@@ -187,6 +294,7 @@ function render() {
   updatePlayer(deltaTime);
   updateCamera(deltaTime);
   updateAmmoPhysics(deltaTime);
+  engine.update(deltaTime); 
   stats.update();
 
   // render!
@@ -196,7 +304,7 @@ function render() {
 function updateRings(deltaTime) {
   var playerPosition = player.object.position;
   var playerToCamera = camera.position.clone().sub(player.object.position).normalize();
-  console.log(playerToCamera.length());
+
   for (var i = 0; i < rings.length; i++) {
     var ring = rings[i];
     if (playerPosition.distanceToSquared(ring.position) > visibleRadius*visibleRadius) {
@@ -213,6 +321,12 @@ function updateCubes(deltaTime) {
     if (playerPosition.distanceToSquared(cube.position) > visibleRadius*visibleRadius) {
       cube.position.sub(playerPosition).normalize().multiplyScalar(-visibleRadius).add(playerPosition);
     }
+
+    // jess - lol
+    var time = Date.now() * 0.001;
+    cube.rotation.x = time;
+    cube.rotation.y = time;
+
   }
 }
 
@@ -263,10 +377,10 @@ function updatePlayer(deltaTime) {
   player.object.up = player.up;
 
   // check for player collision with cube
-  if (checkCollision(player.object)) {
-    console.log("player collision"); 
-   // player.object.
-  }
+  // if (checkCollision(player.object)) {
+  //   console.log("player collision"); 
+  //  // player.object.
+  //}
 
   player.object.lookAt(camera.position.clone().addScaledVector(player.up, -1));
 }
@@ -288,51 +402,51 @@ function updateAmmoPhysics(deltaTime) {
       continue; 
 
     ammo[i].mesh.position.add(ammo[i].velocity.clone().multiplyScalar(deltaTime));
-    if (player.position.distanceToSquared(ammo[i].mesh.position) > 50*visibleRadius*visibleRadius)
-      ammo[i].alive = false; 
+    if (player.position.distanceToSquared(ammo[i].mesh.position) > visibleRadius*visibleRadius) {
+      //killObject(ammo[i]); 
+      //console.log("killing ammo"); 
+    }
 
     // check for collisions with cubes
-    if (checkCollision(ammo[i].mesh)) {
-      boomSound.play(); 
-      //triggerCollision(ammo[i].mesh); 
+    if (handleCubeCollision(ammo[i].mesh)) { 
+      ammo[i].mesh.material.transparent = true; 
+      ammo[i].mesh.material.opacity = 0.0; 
     }
+    //killObject(ammo[i].mesh); 
    // ammo[i]._l.position.copy(ammo[i].mesh.position);
   }
 
 }
+function killObject(object) {
+  scene.remove(object); 
+  object.alive = false; 
+  object.position = new THREE.Vector3(-1e9); 
+}
 
 // checks if collision with any cubes with mesh 
-function checkCollision(mesh) {
+function handleCubeCollision(mesh) {
 
  var meshBBox = new THREE.Box3().setFromObject(mesh);  
 
 for (var i = 0; i < cubes.length; i++) {
   cubes[i].geometry.computeBoundingBox(); 
-  var min = cubes[i].position.clone().sub(new THREE.Vector3(0.5, 0.5, 0.5));  
-  var max = cubes[i].position.clone().add(new THREE.Vector3(0.5, 0.5, 0.5));  
+  var halfdiag = Math.sqrt(3)/2.0; 
+  var min = cubes[i].position.clone().sub(new THREE.Vector3(halfdiag, halfdiag, halfdiag));  
+  var max = cubes[i].position.clone().add(new THREE.Vector3(halfdiag, halfdiag, halfdiag));  
   var box = new THREE.Box3(min, max); 
 
-  if (box.intersectsBox(meshBBox)) {
-    //triggerCubeCollision(mesh); 
-    var playerPosition = player.object.position;
-    cubes[i].position.sub(playerPosition).normalize().multiplyScalar(-visibleRadius).add(playerPosition);
-    return true; 
-  }
-}
-}
+    if (box.intersectsBox(meshBBox)) {
+      var playerPosition = player.object.position;
+      cubes[i].position.sub(playerPosition).normalize().multiplyScalar(-visibleRadius).add(playerPosition);
+      
+      boomSound.play(); 
 
-function triggerCubeCollision(mesh) {
-  var newLight = new THREE.PointLight(0xffffff, 1, 100, 2); 
-  newLight.position.set(mesh.position); 
-
-  lights.push({
-    light:newLight, 
-    lifetime:time, 
+      // origin, velocity, color, opacity, num, texture
+      engine.createParticleCluster(mesh.position, 10, new THREE.Color(0xff0000), 0.8, 100, textures.fire); 
+      return true; 
     }
-  )
-  
-  scene.add(newLight); 
-
+  }
+  return false;
 }
 
 function updateSpeed() {
@@ -361,10 +475,10 @@ window.addEventListener( 'mousedown', function( event ) {
 
     // Creates a ball and throws it
     var ballMass = 35;
-    var ballRadius = 1;
-    var ballMaterial = new THREE.MeshPhongMaterial( { color: 0xffffff } );
+    var ballRadius = 0.4;
+    var ballMaterial = new THREE.MeshPhongMaterial( { color: 0xe0ffff, map: textures.laser, opacity: 0.8 } );
 
-    var ball = new THREE.Mesh( new THREE.SphereBufferGeometry( ballRadius, 14, 10 ), ballMaterial );
+    var ball = new THREE.Mesh( new THREE.SphereBufferGeometry( ballRadius, 9, 3 ), ballMaterial );
     ball.castShadow = true;
     ball.receiveShadow = true;
 
@@ -376,17 +490,12 @@ window.addEventListener( 'mousedown', function( event ) {
     ball.position.add(offset);
 
     var velocity = new THREE.Vector3(direction.x, direction.y, direction.z);  
-    velocity.multiplyScalar(40); 
+    velocity.multiplyScalar(40 + 1.5*playerSpeed); 
 
     var newAmmo = new myAmmo(ball, velocity, ammo.length); 
-    
-    // MEL: hehe 
-
-    // newAmmo._l = new THREE.PointLight(0xffffff, 1, 50, 2);
-    // newAmmo._l.position.copy(position);
-    //scene.add(newAmmo._l);
     scene.add(ball);
     ammo.push(newAmmo);
+
 
   }, false );
 }
