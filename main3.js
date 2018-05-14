@@ -34,6 +34,7 @@ var ringmaterial;
 var ringmaterialVisited;
 
 // score and speed tracker
+var htmlOverlayDiv;
 var htmlScoreDiv;
 var htmlSpeedDiv;
 var htmlGameOverDiv;
@@ -86,6 +87,7 @@ function init() {
 }
 
 function initHtml() {
+  htmlOverlayDiv = document.getElementById('overlay');
   htmlScoreDiv = document.getElementById('score');
   htmlSpeedDiv = document.getElementById('speed');
   htmlGameOverDiv = document.getElementById('gameover');
@@ -94,7 +96,12 @@ function initHtml() {
     htmlGameOverDiv.style = "display: none;";
     playerGameOver = false;
     time = 0;
+    clock.getDelta();
     playerScore = 0;
+  }
+  window.onfocus = function() {
+    // discard blurred time
+    clock.getDelta();
   }
 }
 
@@ -604,7 +611,8 @@ function updateSpeed() {
 
 function initInput() {
 window.addEventListener( 'mousedown', function( event ) {
-
+  
+    if (event.target !== htmlOverlayDiv) return;
 
     var mouseCoords = new THREE.Vector2();
     mouseCoords.set(
