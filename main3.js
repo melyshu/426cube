@@ -48,6 +48,7 @@ var milkyBox;
 
 // sound effect
 var boomSound;
+var dingSound; 
 
 // animal
 var animal;
@@ -63,20 +64,23 @@ animate();
 function init() {
   initTextures();
   initGraphics();
+  initSounds(); 
 	// initAnimal();
   initPlayer();
   initCubes();
   initRings();
   initInput();
   initEngine();
-  boomSound = new Audio("effects/boom.mp3");
-
 }
 
 function initEngine() {
   engine = new ParticleEngine();
 }
 
+function initSounds() {
+  boomSound = new Audio("effects/boom.mp3");
+  dingSound = new Audio("effects/ding.wav"); 
+}
 function initTextures() {
 
   var loader = new THREE.TextureLoader();
@@ -84,8 +88,6 @@ function initTextures() {
   textures.fire = texture;
   texture = loader.load("effects/light2.png");
   textures.light = texture;
-  texture = loader.load("textures/water.jpg");
-  textures.water = texture;
 
   var ddsLoader = new THREE.DDSLoader();
   var map4 = ddsLoader.load( 'textures/explosion_dxt5_mip.dds' );
@@ -393,6 +395,7 @@ function updatePlayer(deltaTime) {
         if (ring.material.emissiveIntensity == 1) {
           playerScore++; 
           ring.material = ringmaterialVisited; 
+        //  dingSound.play(); 
         }
 	    }
 	  }
