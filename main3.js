@@ -114,6 +114,11 @@ function initHtml() {
   document.addEventListener('keydown', function(event) {
     if (event.keyCode === 32 && playerGameOver) { // space
       htmlResetDiv.onclick();
+
+      // reset rings 
+      for (var i = 0; i < rings.length; i++) {
+        rings[i].material = ringmaterial; 
+      }
     }
   }, false);
 }
