@@ -24,11 +24,12 @@ function ParticleCluster()
 			
 	this.ages = []; 
 	this.liveParticles = []; // use float instead of boolean for shader purposes	
-	this.alive = 0;
+	this.alive = 1; // 1 if at least one live particle in cluster is still present
 	this.killed = false; 
 
 	this.particleMaterial = new THREE.PointsMaterial();  
 	this.particleGeometry = new THREE.Geometry(); 
+	this.points = new THREE.Points(); 
 }
 
 ParticleCluster.prototype.initialize = function(origin, velocity, color, opacity, num, texture)
@@ -37,23 +38,29 @@ ParticleCluster.prototype.initialize = function(origin, velocity, color, opacity
 	this.velocity = velocity; 
 	this.numParticles = num; 
 	for (var i = 0; i < this.numParticles; i++) {
-		var noise = 1.0; 
-		this.particleGeometry.vertices.push(new THREE.Vector3(origin.x+Math.random()*noise, origin.y+Math.random()*noise, origin.z+Math.random()*noise)); 
+		var noise = 2;
+		var offsetX = Math.random()*noise - 2*noise; 
+		var offsetY = Math.random()*noise - 2*noise; 
+		var offsetZ = Math.random()*noise - 2*noise; 
+		var center = new THREE.Vector3(origin.x+offsetX, origin.y+offsetY, origin.z+offsetZ);
+		this.particleGeometry.vertices.push(center); 
+
 		this.positions.push(origin.x, origin.y, origin.z); 
 		this.ages.push(0) 
-		this.liveParticles.push(0);  
+		this.liveParticles.push(1);  
 	}
 
 	this.particleMaterial = new THREE.PointsMaterial({
 		color: this.color,
 		opacity: this.opacity,
 		map: texture,
-		size: 10,
+		size: 1,
 		transparent: true, // alphaTest: 0.5,  // if having transparency issues, try including: alphaTest: 0.5, 
-		blending: THREE.NormalBlending, depthTest: true,		
+		depthTest: false,		
 	});
 
 	this.particleGeometry.computeBoundingSphere(); 
+	this.points = new THREE.Points(this.particleGeometry, this.particleMaterial);
 }
 
 ParticleCluster.prototype.update = function(deltaTime)
@@ -62,7 +69,7 @@ ParticleCluster.prototype.update = function(deltaTime)
 	var vertices = this.particleGeometry.vertices;
 
 	for (var i = 0; i < this.numParticles; i++) {
-		if (this.liveParticles[i] == 1)
+		if (this.liveParticles[i] == 0)
 			continue; 
 		else 
 			this.alive = 1; // still have at least one live particle 
@@ -72,9 +79,9 @@ ParticleCluster.prototype.update = function(deltaTime)
 		vertices[i].z += this.velocity.z*deltaTime; 
 
 		this.ages[i] += deltaTime;
-		if (this.ages[i] >  5*deltaTime) {
-			this.liveParticles[i] = 1; 
-			this.particleMaterial.opacity = 0.0; 
+		if (this.ages[i] >  20*deltaTime) {
+			this.liveParticles[i] = 0; 
+			//this.particleMaterial.opacity = 0.0; 
 		}
 	}
 	this.particleGeometry.verticesNeedsUpdate = true; 
@@ -89,6 +96,7 @@ ParticleCluster.prototype.update = function(deltaTime)
 function ParticleEngine()
 {
 	this.particleClusterArray = [];	
+	this.pointsArray = []; 
 }
 
 ParticleEngine.prototype.randomDirection = function(origin) {
@@ -116,16 +124,16 @@ ParticleEngine.prototype.createParticleCluster = function(origin, speed, color, 
 	cluster.initialize(origin, vel, color, opacity, size, texture); 
 	this.particleClusterArray.push(cluster); 
 
-	var points = new THREE.Points(cluster.particleGeometry, cluster.particleMaterial);
-	scene.add(points); 
+	scene.add(cluster.points); 
 }
 
 ParticleEngine.prototype.update = function(deltaTime)
 {
 	for (var i = 0; i < this.particleClusterArray.length; i++) {
 		if (this.particleClusterArray[i].alive == 0 && !this.particleClusterArray[i].killed) {
-			scene.remove(this.particleClusterArray[i]);
+			scene.remove(this.particleClusterArray[i].points);
 			this.particleClusterArray[i].killed = true; 
+			this.particleClusterArray.shift(); 
 			continue; 
 		}
 		this.particleClusterArray[i].update(deltaTime); 

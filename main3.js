@@ -37,7 +37,7 @@ var ammo = [];
 var GRAVITY = new THREE.Vector3(0, -5, 0);
 
 // graphics stuff
-var engine; 
+var engine;  
 var textures = {}; 
 var myMaterials = {}; 
 var fog; 
@@ -368,6 +368,14 @@ function updatePlayer(deltaTime) {
   //}
 
   player.object.lookAt(camera.position.clone().addScaledVector(player.up, -1));
+
+  // handle ring collision 
+  handleRingCollision(); 
+}
+
+// detects if player goes through ring 
+function handleRingCollision() {
+  
 }
 
 // moves the location of the camera
@@ -394,8 +402,7 @@ function updateAmmoPhysics(deltaTime) {
 
     // check for collisions with cubes
     if (handleCubeCollision(ammo[i].mesh)) { 
-      ammo[i].mesh.material.transparent = true; 
-      ammo[i].mesh.material.opacity = 0.0; 
+       
     }
     //killObject(ammo[i].mesh); 
    // ammo[i]._l.position.copy(ammo[i].mesh.position);
@@ -454,14 +461,14 @@ window.addEventListener( 'mousedown', function( event ) {
     var raycaster = new THREE.Raycaster();
 
     raycaster.setFromCamera( mouseCoords, camera);
-    //console.log("raycaster " + raycaster.ray.direction.x + " " + raycaster.ray.direction.y + " " + raycaster.ray.direction.z);
+    
     var direction = new THREE.Vector3(raycaster.ray.direction.x, raycaster.ray.direction.y, raycaster.ray.direction.z);
     var origin = new THREE.Vector3(raycaster.ray.origin.x, raycaster.ray.origin.y, raycaster.ray.origin.z);
 
     // Creates a ball and throws it
     var ballMass = 35;
     var ballRadius = 0.4;
-    var ballMaterial = new THREE.MeshPhongMaterial( { color: 0xe0ffff, map: textures.laser, opacity: 0.8 } );
+    var ballMaterial = new THREE.MeshPhongMaterial( { color: 0xe0ffff, map: textures.fire } );
 
     var ball = new THREE.Mesh( new THREE.SphereBufferGeometry( ballRadius, 9, 3 ), ballMaterial );
     ball.castShadow = true;
