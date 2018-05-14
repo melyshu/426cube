@@ -395,7 +395,7 @@ function updatePlayer(deltaTime) {
         if (ring.material.emissiveIntensity == 1) {
           playerScore++; 
           ring.material = ringmaterialVisited; 
-        //  dingSound.play(); 
+          dingSound.play(); 
         }
 	    }
 	  }
