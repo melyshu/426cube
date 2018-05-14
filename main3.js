@@ -9,6 +9,7 @@ var playerBaseSpeed = 5;
 var playerSpeedupRate = 0.03;
 var playerSpeed = 0;
 var playerRotationRate = 0.3;
+var playerScore = 0;
 
 // cubes
 var cubes = [];
@@ -24,9 +25,11 @@ var torusRadius = 1.2; // length from center to center of tube
 var tubeRadius = 0.1; // radius of the tube
 var ringSpeedupOffset = 0;
 var ringSpeedupOffsetRate = 3;
+var ringmaterial;
+var ringmaterialVisited;
 
-// speed tracker
-var infoText;
+// score and speed tracker (temp values initially to set size)
+var infoText = [1, 1];
 
 // clock
 var clock = new THREE.Clock();
@@ -45,6 +48,7 @@ var milkyBox;
 
 // sound effect
 var boomSound;
+var dingSound;
 
 // animal player
 var myAnimal = 0;
@@ -60,29 +64,31 @@ animate();
 function init() {
   initTextures();
   initGraphics();
+
 	initAnimals();
+	initSounds();
   initPlayer();
   initCubes();
   initRings();
   initInput();
   initEngine();
-  boomSound = new Audio("effects/boom.mp3");
-
 }
 
 function initEngine() {
   engine = new ParticleEngine();
 }
 
+function initSounds() {
+  boomSound = new Audio("effects/boom.mp3");
+  dingSound = new Audio("effects/ding.wav");
+}
 function initTextures() {
 
   var loader = new THREE.TextureLoader();
-  fireTexture = loader.load("effects/fire.png");
-  textures.fire = fireTexture;
-  lightTexture = loader.load("effects/light2.png");
-  textures.light = lightTexture;
-  laserTexture = loader.load("effects/laser.png");
-  textures.laser = laserTexture;
+  var texture = loader.load("effects/fire.png");
+  textures.fire = texture;
+  texture = loader.load("effects/light2.png");
+  textures.light = texture;
 
   var ddsLoader = new THREE.DDSLoader();
   var map4 = ddsLoader.load( 'textures/explosion_dxt5_mip.dds' );
@@ -236,20 +242,24 @@ function initPlayer() {
   // scene.add(player.object);
   // scene.add(player.light);
 
-  infoText = document.createElement('div');
-  infoText.style.position = 'absolute';
-  infoText.style.color = "white";
-  infoText.innerHTML = "Player Speed: " + playerSpeed.toFixed(3); // tracks speed of player
-  infoText.style.top = 12 + 'px';
-  infoText.style.right = 12 + 'px';
-  document.body.appendChild(infoText);
+  for (var i = 0; i < infoText.length; i++) {
+    infoText[i] = document.createElement('div');
+    infoText[i].style.position = 'absolute';
+    infoText[i].style.color = "white";
+    infoText[i].innerHTML = "Player Speed: " + playerSpeed.toFixed(3); // tracks speed of player
+    var offset = 12 + i*20;
+    infoText[i].style.top = offset + 'px';
+    infoText[i].style.right = 12 + 'px';
+    document.body.appendChild(infoText[i]);
+  }
 }
 
 function initRings() {
 
   // set up torus mesh
   var ringgeometry = new THREE.TorusGeometry(torusRadius, tubeRadius, 32, 100);
-  var ringmaterial = new THREE.MeshPhongMaterial( { color: 0xffff00, emissive: 0x200020 } );
+  ringmaterial = new THREE.MeshPhongMaterial( { color: 0xffff00, emissive: 0x200020, emissiveIntensity: 1 } );
+  ringmaterialVisited = new THREE.MeshPhongMaterial( { color: 0xff00ff, emissive: 0x200020, emissiveIntensity: 0});
 
   // TODO: randomize orientation of ring
 
@@ -394,7 +404,7 @@ function updatePlayer(deltaTime) {
 				} ) );
 				var animalSize = animals[myAnimal].size;
 				player.object.scale.set( animalSize, animalSize, animalSize ); //@TODO:
-				player.object.position.copy(player.position); 
+				player.object.position.copy(player.position);
 				scene.add( player.object );
 
 				mixer = new THREE.AnimationMixer( player.object );
@@ -414,11 +424,20 @@ function updatePlayer(deltaTime) {
 	    if (playerPosition.distanceTo(ringPosition) <= torusRadius) {
 	      player.velocity.addScaledVector(player.velocity, -1/10);
 	      ringSpeedupOffset += deltaTime*ringSpeedupOffsetRate;
+
+        // use this as a flag for ring visited
+        if (ring.material.emissiveIntensity == 1) {
+          playerScore++;
+          ring.material = ringmaterialVisited;
+          dingSound.play();
+        }
 	    }
 	  }
 
+    // update score
+    infoText[0].innerHTML = "Score: " + playerScore;
 	  //update speed tracker
-	  infoText.innerHTML = "Player Speed: " + playerSpeed.toFixed(3);
+	  infoText[1].innerHTML = "Player Speed: " + playerSpeed.toFixed(3);
 
 	  // Update the position using the changed delta
 	  player.object.position.addScaledVector(player.velocity, deltaTime);
@@ -439,8 +458,6 @@ function updatePlayer(deltaTime) {
 
 	  player.object.lookAt(camera.position.clone().addScaledVector(player.velocity, 1));
 
-	  // handle ring collision
-	  handleRingCollision();
 	}
 	if ( mixer ) {
 
@@ -450,11 +467,6 @@ function updatePlayer(deltaTime) {
 }
 function killPlayer(mesh) {
   scene.remove(mesh);
-}
-
-// detects if player goes through ring
-function handleRingCollision() {
-
 }
 
 // moves the location of the camera
@@ -481,8 +493,6 @@ function updateAmmoPhysics(deltaTime) {
     ammo[i].mesh.position.add(ammo[i].velocity.clone().multiplyScalar(deltaTime));
     if (player.position.distanceToSquared(ammo[i].mesh.position) > visibleRadius*visibleRadius) {
       killAmmo(ammo[i]);
-      //killObject(ammo[i]);
-      //console.log("killing ammo");
     }
 
     // check for collisions with cubes
