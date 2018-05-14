@@ -49,6 +49,8 @@ var milkyBox;
 // sound effect
 var boomSound;
 var dingSound; 
+var miiSound; 
+var backgroundSound; 
 
 // animal
 var animal;
@@ -79,7 +81,11 @@ function initEngine() {
 
 function initSounds() {
   boomSound = new Audio("effects/boom.mp3");
-  dingSound = new Audio("effects/ding.wav"); 
+  dingSound = new Audio("effects/ding.mp3"); 
+  miiSound = new Audio("effects/mii.mp3"); 
+  backgroundSound = new Audio("effects/background.mp3"); 
+  //miiSound.play(); 
+  miiSound.loop = true; 
 }
 function initTextures() {
 

@@ -70,7 +70,7 @@ ParticleCluster.prototype.initialize = function(origin, velocity, color, opacity
 		map: texture,
 		size: 1,
 		transparent: true, // alphaTest: 0.5,  // if having transparency issues, try including: alphaTest: 0.5,
-    alphaTest: 0.5,
+    	alphaTest: 0.5,
 		depthTest: true
 	});
 
