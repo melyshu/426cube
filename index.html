@@ -6,9 +6,44 @@
 		<style>
 			canvas { position: fixed; top: 0; left: 0; right: 0; bottom: 0; }
 		</style>
+    <link href="main3.css" rel="stylesheet" type="text/css" media="all">
+	</body>
 	</head>
 	<body>
+    <div id="overlay">
+      <div id="info">
+        <div id="score">
+          Score: 0
+        </div>
+        <div id="speed">
+          Speed: 0.000
+        </div>
+      </div>
+      <div id="tips">
+        <div>use wasd or arrows to move, click to shoot, enter to ???</div>
+      </div>
+      <div id="gameover" style="display: none;">
+        <div id="gameover-box">
+          <div id="you-lost">
+            oop u lost
+          </div>
+          <div id="try-again">
+            why dont you give it another shot
+          </div>
+          <div id="reset">
+            try again (or hit space)
+          </div>
+        </div>
+      </div>
+    </div>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/92/three.min.js"></script>
-    <script src="main.js"></script>
-	</body>
+	<script src="js/libs/stats.min.js"></script>
+  	<script src="js/controls/PlayerControls.js"></script>
+	<script src="js/myAmmo.js"></script>
+	<script src="effects/sound.js"></script>
+	<script src="effects/particleEngine.js"></script>
+	<script src="js/DDSLoader.js"></script>
+	<script src="js/CanvasRenderer.js"></script>
+	<script src="js/Projector.js"></script>
+  <script src="main3.js"></script>
 </html>
