@@ -36,6 +36,12 @@ var time = 0;
 var ammo = [];
 var GRAVITY = new THREE.Vector3(0, -5, 0);
 
+// animal
+var animal;
+var mixer;
+var radius = 600;
+var theta = 0;
+
 // === MAIN CODE ===
 init();
 animate();
@@ -43,6 +49,7 @@ animate();
 // === FUNCTIONS ===
 function init() {
   initGraphics();
+	initAnimal();
   initPlayer();
   initCubes();
   initRings();
@@ -60,9 +67,19 @@ function initGraphics() {
   // camera
   camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
   camera.position.set(0, 0, 0);
+	camera.target = new THREE.Vector3( 0, 120, 0 ); // @TODO
 
   // scene
   scene = new THREE.Scene();
+
+	/// light on animal @TODO
+	var light = new THREE.DirectionalLight( 0xefefff, 1.5 );
+	light.position.set( 1, 1, 1 ).normalize();
+	scene.add( light );
+
+	var light = new THREE.DirectionalLight( 0xffefef, 1.5 );
+	light.position.set( -1, -1, -1 ).normalize();
+	scene.add( light );
   // scene.add(new THREE.AmbientLight(0x707070)); // MEL: base light for debugging?
 
   // renderer
@@ -80,9 +97,28 @@ function initGraphics() {
   document.body.appendChild( stats.domElement );
 }
 
+function initAnimal() {
+	var loader = new THREE.JSONLoader();
+	loader.load( "js/models/fish.js", function( geometry ) {
+
+		animal = new THREE.Mesh( geometry, new THREE.MeshLambertMaterial( {
+			vertexColors: THREE.FaceColors,
+			morphTargets: true
+		} ) );
+		animal.scale.set( .01, .01, .01 ); //@TODO:
+		scene.add( animal );
+
+		mixer = new THREE.AnimationMixer( animal );
+
+		var clip = THREE.AnimationClip.CreateFromMorphTargetSequence( 'gallop', geometry.morphTargets, 30 );
+		mixer.clipAction( clip ).setDuration( 1 ).play();
+
+	} );
+}
+
 function initPlayer() {
   playerSpeed = playerSpeedupRate*(time - ringSpeedupOffset) + playerBaseSpeed;
-  
+
   player.position = new THREE.Vector3(0, 0, 0);
   player.velocity = new THREE.Vector3(0, 0, playerSpeed);
   player.up = new THREE.Vector3(0, 1, 0);
@@ -90,7 +126,7 @@ function initPlayer() {
   player.object = new THREE.Mesh(new THREE.CubeGeometry(player.size, player.size, player.size), new THREE.MeshNormalMaterial());
   player.light = new THREE.PointLight(0xffffff, 1, 50, 2);
   player.light.position.set(0, 0, 0);
-  
+
   scene.add(player.object);
   scene.add(player.light);
 
@@ -107,7 +143,7 @@ function initRings() {
 
   // set up torus mesh
   var ringgeometry = new THREE.TorusGeometry(torusRadius, tubeRadius, 32, 100);
-  var ringmaterial = new THREE.MeshBasicMaterial( { color: 0xffff00 } );
+  var ringmaterial = new THREE.MeshPhongMaterial( { color: 0xffff00, emissive: 0x200020 } );
 
   // TODO: randomize orientation of ring
 
@@ -156,7 +192,7 @@ function initCubes() {
       z = (2*Math.random() - 1)*visibleRadius;
     } while (x*x + y*y + z*z > R2);
     cube.position.set(x, y, z);
-    
+
     scene.add(cube);
     cubes.push(cube);
   }
@@ -171,6 +207,8 @@ function render() {
 
   // update scene
   updateSpeed();
+
+	updateAnimal(deltaTime);
   updateCubes(deltaTime);
   updateRings(deltaTime);
   updatePlayer(deltaTime);
@@ -182,10 +220,21 @@ function render() {
   renderer.render(scene, camera);
 }
 
+function updateAnimal(deltaTime) {
+	if (animal) {
+		animal.position.copy(player.object.position);
+		animal.up = player.up;
+		animal.velocity = player.velocity;
+	  animal.lookAt(camera.position.clone().addScaledVector(animal.velocity, 1));
+	}
+	if ( mixer ) {
+		mixer.update( ( deltaTime )  );
+	}
+}
+
 function updateRings(deltaTime) {
   var playerPosition = player.object.position;
   var playerToCamera = camera.position.clone().sub(player.object.position).normalize();
-  console.log(playerToCamera.length());
   for (var i = 0; i < rings.length; i++) {
     var ring = rings[i];
     if (playerPosition.distanceToSquared(ring.position) > visibleRadius*visibleRadius) {
@@ -228,17 +277,12 @@ function updatePlayer(deltaTime) {
   }
 
   // change player speed if in ring
-
   for (var i = 0; i < rings.length; i++) {
     var ring = rings[i];
     var playerPosition = player.object.position;
     var ringPosition = ring.position;
     if (playerPosition.distanceTo(ringPosition) <= torusRadius) {
-<<<<<<< HEAD
-      player.velocity.addScaledVector(player.velocity, -1/10);
-=======
       ringSpeedupOffset += deltaTime*ringSpeedupOffsetRate;
->>>>>>> e25ad08d6be1f5bc50c6a0f9d210446c0dd2231e
     }
   }
 
@@ -259,6 +303,7 @@ function updatePlayer(deltaTime) {
 // moves the location of the camera
 function updateCamera(deltaTime) {
 
+// @TODO
   var pos = player.object.position.clone().addScaledVector(player.velocity.clone().normalize(), -3).addScaledVector(player.up, 1);
   camera.position.copy(pos);
   camera.up.copy(player.up);
@@ -276,7 +321,7 @@ function updateAmmoPhysics(deltaTime) {
 function updateSpeed() {
   // reduces speed if thru ring
   // if ( cube in ring)
-  
+
   playerSpeed = playerSpeedupRate*(time - ringSpeedupOffset) + playerBaseSpeed;
 
   // updates speedtracker

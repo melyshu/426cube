@@ -1,6 +1,6 @@
 THREE.PlayerControls = function() {
   var scope = this;
-  
+
   this.moveUp = false;
 	this.moveDown = false;
 	this.moveLeft = false;
