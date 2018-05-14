@@ -34,7 +34,17 @@ var time = 0;
 
 // shooter balls
 var ammo = [];
-var GRAVITY = new THREE.Vector3(0, -5, 0);
+
+// graphics stuff
+var engine;
+var textures = {};
+var myMaterials = {};
+var fog;
+var texture_placeholder;
+var milkyBox;
+
+// sound effect
+var boomSound;
 
 // animal
 var animal;
@@ -48,17 +58,74 @@ animate();
 
 // === FUNCTIONS ===
 function init() {
+  initTextures();
   initGraphics();
 	initAnimal();
   initPlayer();
   initCubes();
   initRings();
   initInput();
+  initEngine();
+  boomSound = new Audio("effects/boom.mp3");
+
+}
+
+function initEngine() {
+  engine = new ParticleEngine();
+}
+
+function initTextures() {
+
+  var loader = new THREE.TextureLoader();
+  fireTexture = loader.load("effects/fire.png");
+  textures.fire = fireTexture;
+  lightTexture = loader.load("effects/light2.png");
+  textures.light = lightTexture;
+  laserTexture = loader.load("effects/laser.png");
+  textures.laser = laserTexture;
+
+  var ddsLoader = new THREE.DDSLoader();
+  var map4 = ddsLoader.load( 'textures/explosion_dxt5_mip.dds' );
+  map4.anisotropy = 4;
+  myMaterials.fire = new THREE.MeshBasicMaterial( { map: map4, side: THREE.DoubleSide, blending: THREE.AdditiveBlending, depthTest: true, transparent: true } );
+
+  myMaterials.cloud = new THREE.MeshBasicMaterial( {
+        map: loader.load( 'textures/cloud.png' ),
+        depthTest: false,
+        transparent: true,
+        opacity: 0.8,
+        side: THREE.DoubleSide
+      } );
+
+  var materials = [
+
+    loadTexture( 'textures/skybox/px.jpg' ), // right
+    loadTexture( 'textures/skybox/nx.jpg' ), // left
+    loadTexture( 'textures/skybox/py.jpg' ), // top
+    loadTexture( 'textures/skybox/ny.jpg' ), // bottom
+    loadTexture( 'textures/skybox/pz.jpg' ), // back
+    loadTexture( 'textures/skybox/nz.jpg' )  // front
+
+  ];
+  myMaterials.skybox = materials;
+
+  materials = [
+
+    loadTexture( 'textures/MilkyWay/dark-s_px.jpg' ), // bottom
+    loadTexture( 'textures/MilkyWay/dark-s_nx.jpg' ), // right
+    loadTexture( 'textures/MilkyWay/dark-s_py.jpg' ), // back
+    loadTexture( 'textures/MilkyWay/dark-s_ny.jpg' ), // left
+    loadTexture( 'textures/MilkyWay/dark-s_pz.jpg' ),  // front
+    loadTexture( 'textures/MilkyWay/dark-s_nz.jpg' ) // top
+
+  ];
+  myMaterials.milkyway = materials;
 }
 
 function animate() {
-  render();
   requestAnimationFrame(animate);
+  render();
+
 }
 
 // initializes graphics variables
@@ -81,6 +148,21 @@ function initGraphics() {
 	light.position.set( -1, -1, -1 ).normalize();
 	scene.add( light );
   // scene.add(new THREE.AmbientLight(0x707070)); // MEL: base light for debugging?
+
+  // background
+  texture_placeholder = document.createElement( 'canvas' );
+  texture_placeholder.width = 128;
+  texture_placeholder.height = 128;
+  var context = texture_placeholder.getContext( '2d' );
+  context.fillStyle = 'rgb( 200, 200, 200 )';
+  context.fillRect( 0, 0, texture_placeholder.width, texture_placeholder.height );
+
+  var container = document.getElementById( 'container' );
+  var geometry = new THREE.BoxGeometry( 300, 300, 300, 7, 7, 7 );
+  geometry.scale( - 1, 1, 1 );
+
+  milkyBox = new THREE.Mesh( geometry, myMaterials.milkyway );
+  scene.add( milkyBox );
 
   // renderer
   renderer = new THREE.WebGLRenderer();
@@ -115,7 +197,23 @@ function initAnimal() {
 
 	} );
 }
+function loadTexture( path ) {
 
+  var texture = new THREE.Texture( texture_placeholder );
+  var material = new THREE.MeshBasicMaterial( { map: texture, overdraw: 0.5 } );
+
+  var image = new Image();
+  image.onload = function () {
+
+    texture.image = this;
+    texture.needsUpdate = true;
+
+  };
+  image.src = path;
+
+  return material;
+
+}
 function initPlayer() {
   playerSpeed = playerSpeedupRate*(time - ringSpeedupOffset) + playerBaseSpeed;
 
@@ -172,9 +270,10 @@ function initCubes() {
 
   // set up colors
   var geometry = new THREE.CubeGeometry(1, 1, 1);
+  var colors = [0xdd0000, 0x00dd00, 0x0000dd, 0xdddd00, 0xdd00dd, 0x00dddd];
   var materials = []
-  for (var i = 0; i < cubeColorCount; i++) {
-    var c = Math.floor(0xffffff*(Math.random() + 1)/2);
+  for (var i = 0; i < colors.length; i++) {
+    var c = colors[i];
     materials.push(new THREE.MeshPhongMaterial({ color: c }));
   }
 
@@ -182,7 +281,8 @@ function initCubes() {
   for (var i = 0; i < cubeCount; i++) {
     var index = Math.floor(materials.length*Math.random());
     var material = materials[index];
-    var cube = new THREE.Mesh(geometry, material);
+
+    var cube = new THREE.Mesh(geometry, myMaterials.fire);
 
     var R2 = visibleRadius*visibleRadius;
     var x, y, z;
@@ -214,6 +314,7 @@ function render() {
   updatePlayer(deltaTime);
   updateCamera(deltaTime);
   updateAmmoPhysics(deltaTime);
+  engine.update(deltaTime);
   stats.update();
 
   // render!
@@ -251,6 +352,12 @@ function updateCubes(deltaTime) {
     if (playerPosition.distanceToSquared(cube.position) > visibleRadius*visibleRadius) {
       cube.position.sub(playerPosition).normalize().multiplyScalar(-visibleRadius).add(playerPosition);
     }
+
+    // jess - lol
+    var time = Date.now() * 0.001;
+    cube.rotation.x = time;
+    cube.rotation.y = time;
+
   }
 }
 
@@ -282,6 +389,7 @@ function updatePlayer(deltaTime) {
     var playerPosition = player.object.position;
     var ringPosition = ring.position;
     if (playerPosition.distanceTo(ringPosition) <= torusRadius) {
+      player.velocity.addScaledVector(player.velocity, -1/10);
       ringSpeedupOffset += deltaTime*ringSpeedupOffsetRate;
     }
   }
@@ -291,13 +399,30 @@ function updatePlayer(deltaTime) {
 
   // Update the position using the changed delta
   player.object.position.addScaledVector(player.velocity, deltaTime);
+  player.position.copy(player.object.position);
   player.light.position.copy(player.object.position);
+  milkyBox.position.copy(player.object.position);
   player.velocity = velocity;
   player.up = up;
 
   // make the player look at the camera
   player.object.up = player.up;
+
+  // check for player collision with cube
+  // if (checkCollision(player.object)) {
+  //   console.log("player collision");
+  //  // player.object.
+  //}
+
   player.object.lookAt(camera.position.clone().addScaledVector(player.up, -1));
+
+  // handle ring collision
+  handleRingCollision();
+}
+
+// detects if player goes through ring
+function handleRingCollision() {
+
 }
 
 // moves the location of the camera
@@ -311,17 +436,62 @@ function updateCamera(deltaTime) {
 }
 
 function updateAmmoPhysics(deltaTime) {
-  for (var i = 0; i < ammo.length; i++) {
-    ammo[i].mesh.position.add(ammo[i].velocity.clone().multiplyScalar(deltaTime));
-   // ammo[i]._l.position.copy(ammo[i].mesh.position);
-    //scene.add(ammo[i].mesh); // MEL: i think this is not necessary once it's already there
+
+  while (ammo.length > 0 && !ammo[0].alive) {
+    ammo.shift();
   }
+
+  for (var i = 0; i < ammo.length; i++) {
+
+    if (!ammo[i].alive)
+      continue;
+
+    ammo[i].mesh.position.add(ammo[i].velocity.clone().multiplyScalar(deltaTime));
+    if (player.position.distanceToSquared(ammo[i].mesh.position) > visibleRadius*visibleRadius) {
+      killAmmo(ammo[i]);
+      //killObject(ammo[i]);
+      //console.log("killing ammo");
+    }
+
+    // check for collisions with cubes
+    if (handleCubeCollision(ammo[i].mesh)) {
+      killAmmo(ammo[i]);
+    }
+  }
+
+}
+function killAmmo(object) {
+  scene.remove(object.mesh);
+  object.alive = false;
+}
+
+// checks if collision with any cubes with mesh
+function handleCubeCollision(mesh) {
+
+ var meshBBox = new THREE.Box3().setFromObject(mesh);
+
+  for (var i = 0; i < cubes.length; i++) {
+    cubes[i].geometry.computeBoundingBox();
+    var halfdiag = Math.sqrt(3)/2.0;
+    var min = cubes[i].position.clone().sub(new THREE.Vector3(halfdiag, halfdiag, halfdiag));
+    var max = cubes[i].position.clone().add(new THREE.Vector3(halfdiag, halfdiag, halfdiag));
+    var box = new THREE.Box3(min, max);
+
+    if (box.intersectsBox(meshBBox)) {
+      var playerPosition = player.object.position;
+      cubes[i].position.sub(playerPosition).normalize().multiplyScalar(-visibleRadius).add(playerPosition);
+
+      boomSound.play();
+
+      // origin, velocity, color, opacity, num, texture
+      engine.createParticleCluster(mesh.position, 10, new THREE.Color(0xff0000), 0.8, 100, textures.fire);
+      return true;
+    }
+  }
+  return false;
 }
 
 function updateSpeed() {
-  // reduces speed if thru ring
-  // if ( cube in ring)
-
   playerSpeed = playerSpeedupRate*(time - ringSpeedupOffset) + playerBaseSpeed;
 
   // updates speedtracker
@@ -341,16 +511,16 @@ window.addEventListener( 'mousedown', function( event ) {
     var raycaster = new THREE.Raycaster();
 
     raycaster.setFromCamera( mouseCoords, camera);
-    //console.log("raycaster " + raycaster.ray.direction.x + " " + raycaster.ray.direction.y + " " + raycaster.ray.direction.z);
+
     var direction = new THREE.Vector3(raycaster.ray.direction.x, raycaster.ray.direction.y, raycaster.ray.direction.z);
     var origin = new THREE.Vector3(raycaster.ray.origin.x, raycaster.ray.origin.y, raycaster.ray.origin.z);
 
     // Creates a ball and throws it
     var ballMass = 35;
-    var ballRadius = 1;
-    var ballMaterial = new THREE.MeshPhongMaterial( { color: 0xffffff } );
+    var ballRadius = 0.4;
+    var ballMaterial = new THREE.MeshPhongMaterial( { color: 0xe0ffff, map: textures.fire } );
 
-    var ball = new THREE.Mesh( new THREE.SphereBufferGeometry( ballRadius, 14, 10 ), ballMaterial );
+    var ball = new THREE.Mesh( new THREE.SphereBufferGeometry( ballRadius, 9, 3 ), ballMaterial );
     ball.castShadow = true;
     ball.receiveShadow = true;
 
@@ -362,16 +532,12 @@ window.addEventListener( 'mousedown', function( event ) {
     ball.position.add(offset);
 
     var velocity = new THREE.Vector3(direction.x, direction.y, direction.z);
-    velocity.multiplyScalar(70);
+    velocity.multiplyScalar(40 + 1.5*playerSpeed);
 
-    var newAmmo = new myAmmo(ball, velocity);
-
-    // MEL: hehe
-    // newAmmo._l = new THREE.PointLight(0xffffff, 1, 50, 2);
-    // newAmmo._l.position.copy(position);
-    //scene.add(newAmmo._l);
+    var newAmmo = new myAmmo(ball, velocity, ammo.length);
     scene.add(ball);
     ammo.push(newAmmo);
+
 
   }, false );
 }
