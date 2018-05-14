@@ -60,7 +60,7 @@ animate();
 function init() {
   initTextures();
   initGraphics();
-	initAnimal();
+	// initAnimal();
   initPlayer();
   initCubes();
   initRings();
@@ -179,24 +179,6 @@ function initGraphics() {
   document.body.appendChild( stats.domElement );
 }
 
-function initAnimal() {
-	var loader = new THREE.JSONLoader();
-	loader.load( "js/models/fish.js", function( geometry ) {
-
-		animal = new THREE.Mesh( geometry, new THREE.MeshLambertMaterial( {
-			vertexColors: THREE.FaceColors,
-			morphTargets: true
-		} ) );
-		animal.scale.set( .01, .01, .01 ); //@TODO:
-		scene.add( animal );
-
-		mixer = new THREE.AnimationMixer( animal );
-
-		var clip = THREE.AnimationClip.CreateFromMorphTargetSequence( 'gallop', geometry.morphTargets, 30 );
-		mixer.clipAction( clip ).setDuration( 1 ).play();
-
-	} );
-}
 function loadTexture( path ) {
 
   var texture = new THREE.Texture( texture_placeholder );
@@ -221,12 +203,29 @@ function initPlayer() {
   player.velocity = new THREE.Vector3(0, 0, playerSpeed);
   player.up = new THREE.Vector3(0, 1, 0);
   player.size = 0.5;
-  player.object = new THREE.Mesh(new THREE.CubeGeometry(player.size, player.size, player.size), new THREE.MeshNormalMaterial());
-  player.light = new THREE.PointLight(0xffffff, 1, 50, 2);
-  player.light.position.set(0, 0, 0);
 
-  scene.add(player.object);
-  scene.add(player.light);
+	var loader = new THREE.JSONLoader();
+	loader.load( "js/models/fish.js", function( geometry ) {
+
+		player.object = new THREE.Mesh( geometry, new THREE.MeshLambertMaterial( {
+			vertexColors: THREE.FaceColors,
+			morphTargets: true
+		} ) );
+		player.object.scale.set( .01, .01, .01 ); //@TODO:
+		scene.add( player.object );
+
+		mixer = new THREE.AnimationMixer( player.object );
+
+		var clip = THREE.AnimationClip.CreateFromMorphTargetSequence( 'gallop', geometry.morphTargets, 30 );
+		mixer.clipAction( clip ).setDuration( 1 ).play();
+
+	} );
+  // player.object = new THREE.Mesh(new THREE.CubeGeometry(player.size, player.size, player.size), new THREE.MeshNormalMaterial());
+  // player.light = new THREE.PointLight(0xffffff, 1, 50, 2);
+  // player.light.position.set(0, 0, 0);
+
+  // scene.add(player.object);
+  // scene.add(player.light);
 
   infoText = document.createElement('div');
   infoText.style.position = 'absolute';
@@ -308,29 +307,19 @@ function render() {
   // update scene
   updateSpeed();
 
-	updateAnimal(deltaTime);
-  updateCubes(deltaTime);
-  updateRings(deltaTime);
-  updatePlayer(deltaTime);
-  updateCamera(deltaTime);
+	// updateAnimal(deltaTime);
+	if (player.object) {
+		updateCubes(deltaTime);
+	  updateRings(deltaTime);
+	  updatePlayer(deltaTime);
+		updateCamera(deltaTime);
+	}
   updateAmmoPhysics(deltaTime);
   engine.update(deltaTime);
   stats.update();
 
   // render!
   renderer.render(scene, camera);
-}
-
-function updateAnimal(deltaTime) {
-	if (animal) {
-		animal.position.copy(player.object.position);
-		animal.up = player.up;
-		animal.velocity = player.velocity;
-	  animal.lookAt(camera.position.clone().addScaledVector(animal.velocity, 1));
-	}
-	if ( mixer ) {
-		mixer.update( ( deltaTime )  );
-	}
 }
 
 function updateRings(deltaTime) {
@@ -363,61 +352,68 @@ function updateCubes(deltaTime) {
 
 // update the position and velocity of the player
 function updatePlayer(deltaTime) {
-  var position = player.object.position.clone();
-  var velocity = player.velocity.clone().setLength(playerSpeed);
-  var up = player.up.clone();
-  var right = velocity.clone().cross(up).normalize();
+	if (player.object) {
+		var position = player.object.position.clone();
+	  var velocity = player.velocity.clone().setLength(playerSpeed);
+	  var up = player.up.clone();
+	  var right = velocity.clone().cross(up).normalize();
 
-  if (controls.moveUp) {
-    velocity.addScaledVector(up, playerRotationRate).setLength(playerSpeed);
-    up = right.clone().cross(velocity).normalize();
-  }
-  if (controls.moveDown) {
-    velocity.addScaledVector(up, -playerRotationRate).setLength(playerSpeed);
-    up = right.clone().cross(velocity).normalize();
-  }
-  if (controls.moveRight) {
-    velocity.addScaledVector(right, playerRotationRate).setLength(playerSpeed);
-  }
-  if (controls.moveLeft) {
-    velocity.addScaledVector(right, -playerRotationRate).setLength(playerSpeed);
-  }
+	  if (controls.moveUp) {
+	    velocity.addScaledVector(up, playerRotationRate).setLength(playerSpeed);
+	    up = right.clone().cross(velocity).normalize();
+	  }
+	  if (controls.moveDown) {
+	    velocity.addScaledVector(up, -playerRotationRate).setLength(playerSpeed);
+	    up = right.clone().cross(velocity).normalize();
+	  }
+	  if (controls.moveRight) {
+	    velocity.addScaledVector(right, playerRotationRate).setLength(playerSpeed);
+	  }
+	  if (controls.moveLeft) {
+	    velocity.addScaledVector(right, -playerRotationRate).setLength(playerSpeed);
+	  }
 
-  // change player speed if in ring
-  for (var i = 0; i < rings.length; i++) {
-    var ring = rings[i];
-    var playerPosition = player.object.position;
-    var ringPosition = ring.position;
-    if (playerPosition.distanceTo(ringPosition) <= torusRadius) {
-      player.velocity.addScaledVector(player.velocity, -1/10);
-      ringSpeedupOffset += deltaTime*ringSpeedupOffsetRate;
-    }
-  }
+	  // change player speed if in ring
+	  for (var i = 0; i < rings.length; i++) {
+	    var ring = rings[i];
+	    var playerPosition = player.object.position;
+	    var ringPosition = ring.position;
+	    if (playerPosition.distanceTo(ringPosition) <= torusRadius) {
+	      player.velocity.addScaledVector(player.velocity, -1/10);
+	      ringSpeedupOffset += deltaTime*ringSpeedupOffsetRate;
+	    }
+	  }
 
-  //update speed tracker
-  infoText.innerHTML = "Player Speed: " + playerSpeed.toFixed(3);
+	  //update speed tracker
+	  infoText.innerHTML = "Player Speed: " + playerSpeed.toFixed(3);
 
-  // Update the position using the changed delta
-  player.object.position.addScaledVector(player.velocity, deltaTime);
-  player.position.copy(player.object.position);
-  player.light.position.copy(player.object.position);
-  milkyBox.position.copy(player.object.position);
-  player.velocity = velocity;
-  player.up = up;
+	  // Update the position using the changed delta
+	  player.object.position.addScaledVector(player.velocity, deltaTime);
+	  player.position.copy(player.object.position);
+	  // player.light.position.copy(player.object.position);
+	  milkyBox.position.copy(player.object.position);
+	  player.velocity = velocity;
+	  player.up = up;
 
-  // make the player look at the camera
-  player.object.up = player.up;
+	  // make the player look at the camera
+	  player.object.up = player.up;
 
-  // check for player collision with cube
-  // if (checkCollision(player.object)) {
-  //   console.log("player collision");
-  //  // player.object.
-  //}
+	  // check for player collision with cube
+	  // if (checkCollision(player.object)) {
+	  //   console.log("player collision");
+	  //  // player.object.
+	  //}
 
-  player.object.lookAt(camera.position.clone().addScaledVector(player.up, -1));
+	  player.object.lookAt(camera.position.clone().addScaledVector(player.velocity, 1));
 
-  // handle ring collision
-  handleRingCollision();
+	  // handle ring collision
+	  handleRingCollision();
+	}
+	if ( mixer ) {
+
+		mixer.update( ( deltaTime )  );
+
+	}
 }
 
 // detects if player goes through ring
