@@ -47,7 +47,7 @@ var ammo = [];
 
 // graphics stuff
 var engine;
-var textures = {};
+var textures = [];
 var myMaterials = {};
 var fog;
 var texture_placeholder;
@@ -55,10 +55,12 @@ var milkyBox;
 
 // sound effect
 var boomSound;
-var dingSound;
+var dingSound; 
+var miiSound; 
+var backgroundSound; 
 
 // animal player
-var myAnimal = 0;
+var myAnimalIndex = 0;
 var animals = [];
 var mixer;
 var prevChangeAnimal = false;
@@ -69,11 +71,11 @@ animate();
 
 // === FUNCTIONS ===
 function init() {
+
+  initAnimals();
   initHtml();
   initTextures();
   initGraphics();
-
-	initAnimals();
 	initSounds();
   initPlayer();
   initCubes();
@@ -101,13 +103,20 @@ function initEngine() {
 
 function initSounds() {
   boomSound = new Audio("effects/boom.mp3");
-  dingSound = new Audio("effects/ding.wav");
+  dingSound = new Audio("effects/ding.mp3"); 
+  miiSound = new Audio("effects/mii.mp3"); 
+  backgroundSound = new Audio("effects/background.mp3"); 
 }
 function initTextures() {
 
   var loader = new THREE.TextureLoader();
-  var texture = loader.load("effects/fire.png");
-  textures.fire = texture;
+  var texture;
+  for (var i = 0; i < animals.length; i++) {
+    textures[i] = {}; 
+  }
+  textures[0].fire = loader.load("effects/fire.png");
+  textures[1].fire = loader.load("effects/firePurple.png"); 
+  textures[2].fire = loader.load("effects/fireGreen.png"); 
   texture = loader.load("effects/light2.png");
   textures.light = texture;
 
@@ -234,7 +243,8 @@ function loadTexture( path ) {
 function initAnimals() {
 	animals = [
 		{model: "js/models/butterfly.js", size: .1},
-		{model: "js/models/eagle.js", size: .01}
+		{model: "js/models/eagle.js", size: .01},
+    {model: "js/models/fox.js", size: 0.01}
 	]
 }
 
@@ -248,13 +258,13 @@ function initPlayer() {
   player.size = 0.5;
 
 	var loader = new THREE.JSONLoader();
-	loader.load( animals[myAnimal].model, function( geometry ) {
+	loader.load( animals[myAnimalIndex].model, function( geometry ) {
 
 		player.object = new THREE.Mesh( geometry, new THREE.MeshLambertMaterial( {
 			vertexColors: THREE.FaceColors,
 			morphTargets: true
 		} ) );
-		var animalSize = animals[myAnimal].size;
+		var animalSize = animals[myAnimalIndex].size;
 		player.object.scale.set( animalSize, animalSize, animalSize ); //@TODO:
 		scene.add( player.object );
 
@@ -412,16 +422,16 @@ function updatePlayer(deltaTime) {
 	    velocity.addScaledVector(right, -playerRotationRate).setLength(playerSpeed);
 	  }
 		if (controls.changeAnimal && !prevChangeAnimal) {
-			myAnimal = (myAnimal+1)%animals.length;
+			myAnimalIndex = (myAnimalIndex+1)%animals.length;
 			scene.remove(player.object);
 			var loader = new THREE.JSONLoader();
-			loader.load( animals[myAnimal].model, function( geometry ) {
+			loader.load( animals[myAnimalIndex].model, function( geometry ) {
 
 				player.object = new THREE.Mesh( geometry, new THREE.MeshLambertMaterial( {
 					vertexColors: THREE.FaceColors,
 					morphTargets: true
 				} ) );
-				var animalSize = animals[myAnimal].size;
+				var animalSize = animals[myAnimalIndex].size;
 				player.object.scale.set( animalSize, animalSize, animalSize ); //@TODO:
 				player.object.position.copy(player.position);
 				scene.add( player.object );
@@ -557,7 +567,8 @@ function handleCubeCollision(mesh) {
       boomSound.play();
 
       // origin, velocity, color, opacity, num, texture
-      engine.createParticleCluster(mesh.position, 10, new THREE.Color(0xff0000), 0.8, 100, textures.fire);
+      var currTexture = textures[myAnimalIndex].fire; 
+      engine.createParticleCluster(mesh.position, 10, new THREE.Color(0x000000), 0.2, 100, currTexture);
       return true;
     }
   }
@@ -588,7 +599,7 @@ window.addEventListener( 'mousedown', function( event ) {
     // Creates a ball and throws it
     var ballMass = 35;
     var ballRadius = 0.4;
-    var ballMaterial = new THREE.MeshPhongMaterial( { color: 0xe0ffff, map: textures.fire } );
+    var ballMaterial = new THREE.MeshPhongMaterial( { color: 0xe0ffff, map: textures[myAnimalIndex].fire } );
 
     var ball = new THREE.Mesh( new THREE.SphereBufferGeometry( ballRadius, 9, 3 ), ballMaterial );
     ball.castShadow = true;
