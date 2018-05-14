@@ -1,0 +1,19 @@
+#overlay {
+    position: fixed;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 10;
+}
+
+#info {
+    position: absolute;
+    top: 15px;
+    right: 15px;
+    width: 100px;
+    padding: 5px;
+    background-color: rgba(0, 0, 0, 0.6);
+    color: #fff;
+    text-align: right;
+}

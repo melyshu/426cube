@@ -31,8 +31,9 @@ var ringSpeedupOffsetRate = 3;
 var ringmaterial;
 var ringmaterialVisited;
 
-// score and speed tracker (temp values initially to set size)
-var infoText = [1, 1];
+// score and speed tracker
+var htmlScoreDiv;
+var htmlSpeedDiv;
 
 // clock
 var clock = new THREE.Clock();
@@ -186,6 +187,13 @@ function initGraphics() {
   stats.domElement.style.position = 'absolute';
   stats.domElement.style.top = '0px';
   document.body.appendChild( stats.domElement );
+  
+  // resize updates
+  window.addEventListener('resize', function() {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize( window.innerWidth, window.innerHeight );
+  }, false);
 }
 
 function loadTexture( path ) {
@@ -245,17 +253,8 @@ function initPlayer() {
 
   // scene.add(player.object);
   // scene.add(player.light);
-
-  for (var i = 0; i < infoText.length; i++) {
-    infoText[i] = document.createElement('div');
-    infoText[i].style.position = 'absolute';
-    infoText[i].style.color = "white";
-    infoText[i].innerHTML = "Player Speed: " + playerSpeed.toFixed(3); // tracks speed of player
-    var offset = 12 + i*20;
-    infoText[i].style.top = offset + 'px';
-    infoText[i].style.right = 12 + 'px';
-    document.body.appendChild(infoText[i]);
-  }
+  htmlScoreDiv = document.getElementById('score');
+  htmlSpeedDiv = document.getElementById('speed');
 }
 
 function initRings() {
@@ -440,9 +439,10 @@ function updatePlayer(deltaTime) {
 	  }
 
     // update score
-    infoText[0].innerHTML = "Score: " + playerScore;
+    htmlScoreDiv.innerHTML = `Score: ${playerScore}`;
+    
 	  //update speed tracker
-	  infoText[1].innerHTML = "Player Speed: " + playerSpeed.toFixed(3);
+	  htmlSpeedDiv.innerHTML = `Speed: ${playerSpeed.toFixed(3)}`;
 
 	  // Update the position using the changed delta
 	  player.object.position.addScaledVector(player.velocity, deltaTime);
@@ -549,9 +549,6 @@ function handleCubeCollision(mesh) {
 
 function updateSpeed() {
   playerSpeed = playerSpeedupRate*(time - ringSpeedupOffset) + playerBaseSpeed;
-
-  // updates speedtracker
-  infoText.innerHTML = "Player Speed: " + playerSpeed.toFixed(3);
 }
 
 function initInput() {
