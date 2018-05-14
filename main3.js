@@ -34,7 +34,6 @@ var time = 0;
 
 // shooter balls
 var ammo = [];
-var GRAVITY = new THREE.Vector3(0, -5, 0);
 
 // graphics stuff
 var engine;  
@@ -353,6 +352,7 @@ function updatePlayer(deltaTime) {
 
   // Update the position using the changed delta
   player.object.position.addScaledVector(player.velocity, deltaTime);
+  player.position.copy(player.object.position);
   player.light.position.copy(player.object.position);
   milkyBox.position.copy(player.object.position);
   player.velocity = velocity;
@@ -388,6 +388,11 @@ function updateCamera(deltaTime) {
 }
 
 function updateAmmoPhysics(deltaTime) {
+  
+  while (ammo.length > 0 && !ammo[0].alive) {
+    console.log(`Ammo is ${ammo.length} long`)
+    ammo.shift();
+  }
 
   for (var i = 0; i < ammo.length; i++) {
 
@@ -396,23 +401,25 @@ function updateAmmoPhysics(deltaTime) {
 
     ammo[i].mesh.position.add(ammo[i].velocity.clone().multiplyScalar(deltaTime));
     if (player.position.distanceToSquared(ammo[i].mesh.position) > visibleRadius*visibleRadius) {
+      killAmmo(ammo[i]);
       //killObject(ammo[i]); 
       //console.log("killing ammo"); 
     }
 
     // check for collisions with cubes
     if (handleCubeCollision(ammo[i].mesh)) { 
-       
+      // ammo[i].mesh.material.transparent = true; 
+      // ammo[i].mesh.material.opacity = 0.0; 
+      killAmmo(ammo[i]);
     }
     //killObject(ammo[i].mesh); 
    // ammo[i]._l.position.copy(ammo[i].mesh.position);
   }
 
 }
-function killObject(object) {
-  scene.remove(object); 
-  object.alive = false; 
-  object.position = new THREE.Vector3(-1e9); 
+function killAmmo(object) {
+  scene.remove(object.mesh); 
+  object.alive = false;
 }
 
 // checks if collision with any cubes with mesh 
@@ -420,12 +427,12 @@ function handleCubeCollision(mesh) {
 
  var meshBBox = new THREE.Box3().setFromObject(mesh);  
 
-for (var i = 0; i < cubes.length; i++) {
-  cubes[i].geometry.computeBoundingBox(); 
-  var halfdiag = Math.sqrt(3)/2.0; 
-  var min = cubes[i].position.clone().sub(new THREE.Vector3(halfdiag, halfdiag, halfdiag));  
-  var max = cubes[i].position.clone().add(new THREE.Vector3(halfdiag, halfdiag, halfdiag));  
-  var box = new THREE.Box3(min, max); 
+  for (var i = 0; i < cubes.length; i++) {
+    cubes[i].geometry.computeBoundingBox(); 
+    var halfdiag = Math.sqrt(3)/2.0; 
+    var min = cubes[i].position.clone().sub(new THREE.Vector3(halfdiag, halfdiag, halfdiag));  
+    var max = cubes[i].position.clone().add(new THREE.Vector3(halfdiag, halfdiag, halfdiag));  
+    var box = new THREE.Box3(min, max); 
 
     if (box.intersectsBox(meshBBox)) {
       var playerPosition = player.object.position;
@@ -434,7 +441,7 @@ for (var i = 0; i < cubes.length; i++) {
       boomSound.play(); 
 
       // origin, velocity, color, opacity, num, texture
-      engine.createParticleCluster(mesh.position, 10, new THREE.Color(0xff0000), 0.8, 100, textures.fire); 
+      //engine.createParticleCluster(mesh.position, 10, new THREE.Color(0xff0000), 0.8, 100, textures.fire); 
       return true; 
     }
   }
