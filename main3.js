@@ -10,6 +10,9 @@ var playerSpeedupRate = 0.03;
 var playerSpeed = 0;
 var playerRotationRate = 0.3;
 var playerScore = 0;
+var cameraPlayerDistance = 4;
+var cameraUpDistance = 1;
+var cameraCentering = 2;
 
 // cubes
 var cubes = [];
@@ -139,8 +142,8 @@ function initGraphics() {
 
   // camera
   camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
-  camera.position.set(0, 0, 0);
-	camera.target = new THREE.Vector3( 0, 120, 0 ); // @TODO
+  // camera.position.set(0, 0, 0);
+	// camera.target = new THREE.Vector3( 0, 120, 0 ); // @TODO
 
   // scene
   scene = new THREE.Scene();
@@ -214,6 +217,7 @@ function initPlayer() {
   playerSpeed = playerSpeedupRate*(time - ringSpeedupOffset) + playerBaseSpeed;
 
   player.position = new THREE.Vector3(0, 0, 0);
+  camera.position.set(0, cameraUpDistance, -cameraPlayerDistance);
   player.velocity = new THREE.Vector3(0, 0, playerSpeed);
   player.up = new THREE.Vector3(0, 1, 0);
   player.size = 0.5;
@@ -348,6 +352,7 @@ function updateRings(deltaTime) {
     var ring = rings[i];
     if (playerPosition.distanceToSquared(ring.position) > visibleRadius*visibleRadius) {
       ring.position.sub(playerPosition).normalize().multiplyScalar(-visibleRadius).add(playerPosition);
+      ring.material = ringmaterial;
     }
     ring.lookAt(player.object.position.clone().add(playerToCamera.multiplyScalar(1.5)));
   }
@@ -415,17 +420,18 @@ function updatePlayer(deltaTime) {
 		}
 		prevChangeAnimal = controls.changeAnimal;
 
-	  // change player speed if in ring
+	  // detect ring visits
 	  for (var i = 0; i < rings.length; i++) {
 	    var ring = rings[i];
 	    var playerPosition = player.object.position;
 	    var ringPosition = ring.position;
 	    if (playerPosition.distanceTo(ringPosition) <= torusRadius) {
-	      player.velocity.addScaledVector(player.velocity, -1/10);
-	      ringSpeedupOffset += deltaTime*ringSpeedupOffsetRate;
+        // MEL: no more speed modifications
+	      // player.velocity.addScaledVector(player.velocity, -1/10);
+	      // ringSpeedupOffset += deltaTime*ringSpeedupOffsetRate;
 
         // use this as a flag for ring visited
-        if (ring.material.emissiveIntensity == 1) {
+        if (ring.material === ringmaterial) {
           playerScore++;
           ring.material = ringmaterialVisited;
           dingSound.play();
@@ -470,11 +476,20 @@ function killPlayer(mesh) {
 
 // moves the location of the camera
 function updateCamera(deltaTime) {
-
+  
+  var follow = camera.position.clone().addScaledVector(player.up, -cameraUpDistance).sub(player.object.position).setLength(cameraPlayerDistance).add(player.object.position).addScaledVector(player.up, cameraUpDistance);
+  var behind = player.object.position.clone().addScaledVector(player.velocity.clone().normalize(), -cameraPlayerDistance).addScaledVector(player.up, cameraUpDistance);
+  
+  camera.position.copy(behind.multiplyScalar(deltaTime*cameraCentering).addScaledVector(follow, 1-deltaTime*cameraCentering));
+  
+  var up = camera.up.clone().multiplyScalar(1 - deltaTime*cameraCentering).addScaledVector(player.up, deltaTime*cameraCentering).normalize();
+  
+  camera.up.copy(up);
+  
 // @TODO
-  var pos = player.object.position.clone().addScaledVector(player.velocity.clone().normalize(), -3).addScaledVector(player.up, 1);
-  camera.position.copy(pos);
-  camera.up.copy(player.up);
+  // var pos = player.object.position.clone().addScaledVector(player.velocity.clone().normalize(), -3).addScaledVector(player.up, 1);
+  // camera.position.copy(pos);
+  // camera.up.copy(player.up);
   camera.lookAt(player.object.position);
 }
 
