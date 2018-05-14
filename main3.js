@@ -392,7 +392,6 @@ function updatePlayer(deltaTime) {
 	    velocity.addScaledVector(right, -playerRotationRate).setLength(playerSpeed);
 	  }
 		if (controls.changeAnimal && !prevChangeAnimal) {
-			console.log(prevChangeAnimal);
 			myAnimal = (myAnimal+1)%animals.length;
 			scene.remove(player.object);
 			var loader = new THREE.JSONLoader();
