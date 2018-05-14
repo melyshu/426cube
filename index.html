@@ -6,6 +6,8 @@
 		<style>
 			canvas { position: fixed; top: 0; left: 0; right: 0; bottom: 0; }
 		</style>
+    <link href="main3.css" rel="stylesheet" type="text/css" media="all">
+	</body>
 	</head>
 	<body>
     <div id="overlay">
@@ -15,6 +17,19 @@
         </div>
         <div id="speed">
           Speed: 0.000
+        </div>
+      </div>
+      <div id="gameover" style="display: none;">
+        <div id="gameover-box">
+          <div id="you-lost">
+            oop u lost
+          </div>
+          <div id="try-again">
+            why dont you give it another shot
+          </div>
+          <div id="reset">
+            try again
+          </div>
         </div>
       </div>
     </div>
@@ -38,7 +53,4 @@
 	<script src="js/CanvasRenderer.js"></script>
 	<script src="js/Projector.js"></script>
   <script src="main3.js"></script>
-  
-  <link href="main3.css" rel="stylesheet" type="text/css" media="all">
-	</body>
 </html>

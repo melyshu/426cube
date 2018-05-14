@@ -34,6 +34,8 @@ var ringmaterialVisited;
 // score and speed tracker
 var htmlScoreDiv;
 var htmlSpeedDiv;
+var htmlGameOverDiv;
+var htmlResetDiv;
 
 // clock
 var clock = new THREE.Clock();
@@ -66,6 +68,7 @@ animate();
 
 // === FUNCTIONS ===
 function init() {
+  initHtml();
   initTextures();
   initGraphics();
 
@@ -76,6 +79,16 @@ function init() {
   initRings();
   initInput();
   initEngine();
+}
+
+function initHtml() {
+  htmlScoreDiv = document.getElementById('score');
+  htmlSpeedDiv = document.getElementById('speed');
+  htmlGameOverDiv = document.getElementById('gameover');
+  htmlResetDiv = document.getElementById('reset');
+  htmlResetDiv.onclick = function() {
+    htmlGameOverDiv.style = "display: none;";
+  }
 }
 
 function initEngine() {
@@ -253,8 +266,6 @@ function initPlayer() {
 
   // scene.add(player.object);
   // scene.add(player.light);
-  htmlScoreDiv = document.getElementById('score');
-  htmlSpeedDiv = document.getElementById('speed');
 }
 
 function initRings() {
@@ -456,10 +467,11 @@ function updatePlayer(deltaTime) {
 	  player.object.up = player.up;
 
 	  // check for player collision with cube
-	  // if (checkCollision(player.object)) {
-	  //   console.log("player collision");
-	  //  // player.object.
-	  //}
+	  if (handleCubeCollision(player.object)) {
+      // YOU LOST LEL
+      htmlGameOverDiv.style = "";
+	   // player.object.
+	  }
 
 	  player.object.lookAt(camera.position.clone().addScaledVector(player.velocity, 1));
 
