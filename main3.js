@@ -46,11 +46,11 @@ var milkyBox;
 // sound effect
 var boomSound;
 
-// animal
-var animal;
+// animal player
+var myAnimal = 0;
+var animals = [];
 var mixer;
-var radius = 600;
-var theta = 0;
+var prevChangeAnimal = false;
 
 // === MAIN CODE ===
 init();
@@ -60,7 +60,7 @@ animate();
 function init() {
   initTextures();
   initGraphics();
-	// initAnimal();
+	initAnimals();
   initPlayer();
   initCubes();
   initRings();
@@ -147,7 +147,7 @@ function initGraphics() {
 	var light = new THREE.DirectionalLight( 0xffefef, 1.5 );
 	light.position.set( -1, -1, -1 ).normalize();
 	scene.add( light );
-  // scene.add(new THREE.AmbientLight(0x707070)); // MEL: base light for debugging?
+  scene.add(new THREE.AmbientLight(0x707070)); // MEL: base light for debugging?
 
   // background
   texture_placeholder = document.createElement( 'canvas' );
@@ -196,6 +196,14 @@ function loadTexture( path ) {
   return material;
 
 }
+
+function initAnimals() {
+	animals = [
+		{model: "js/models/butterfly.js", size: .1},
+		{model: "js/models/eagle.js", size: .01}
+	]
+}
+
 function initPlayer() {
   playerSpeed = playerSpeedupRate*(time - ringSpeedupOffset) + playerBaseSpeed;
 
@@ -205,13 +213,14 @@ function initPlayer() {
   player.size = 0.5;
 
 	var loader = new THREE.JSONLoader();
-	loader.load( "js/models/fish.js", function( geometry ) {
+	loader.load( animals[myAnimal].model, function( geometry ) {
 
 		player.object = new THREE.Mesh( geometry, new THREE.MeshLambertMaterial( {
 			vertexColors: THREE.FaceColors,
 			morphTargets: true
 		} ) );
-		player.object.scale.set( .01, .01, .01 ); //@TODO:
+		var animalSize = animals[myAnimal].size;
+		player.object.scale.set( animalSize, animalSize, animalSize ); //@TODO:
 		scene.add( player.object );
 
 		mixer = new THREE.AnimationMixer( player.object );
@@ -372,6 +381,30 @@ function updatePlayer(deltaTime) {
 	  if (controls.moveLeft) {
 	    velocity.addScaledVector(right, -playerRotationRate).setLength(playerSpeed);
 	  }
+		if (controls.changeAnimal && !prevChangeAnimal) {
+			console.log(prevChangeAnimal);
+			myAnimal = (myAnimal+1)%animals.length;
+			scene.remove(player.object);
+			var loader = new THREE.JSONLoader();
+			loader.load( animals[myAnimal].model, function( geometry ) {
+
+				player.object = new THREE.Mesh( geometry, new THREE.MeshLambertMaterial( {
+					vertexColors: THREE.FaceColors,
+					morphTargets: true
+				} ) );
+				var animalSize = animals[myAnimal].size;
+				player.object.scale.set( animalSize, animalSize, animalSize ); //@TODO:
+				player.object.position.copy(player.position); 
+				scene.add( player.object );
+
+				mixer = new THREE.AnimationMixer( player.object );
+
+				var clip = THREE.AnimationClip.CreateFromMorphTargetSequence( 'gallop', geometry.morphTargets, 30 );
+				mixer.clipAction( clip ).setDuration( 1 ).play();
+
+			} );
+		}
+		prevChangeAnimal = controls.changeAnimal;
 
 	  // change player speed if in ring
 	  for (var i = 0; i < rings.length; i++) {
@@ -414,6 +447,9 @@ function updatePlayer(deltaTime) {
 		mixer.update( ( deltaTime )  );
 
 	}
+}
+function killPlayer(mesh) {
+  scene.remove(mesh);
 }
 
 // detects if player goes through ring
