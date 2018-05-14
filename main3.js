@@ -36,12 +36,12 @@ var time = 0;
 var ammo = [];
 var GRAVITY = new THREE.Vector3(0, -5, 0);
 
-// graphics light 
-var lightEffect = {}; 
-var lights = []; 
+// graphics stuff
 var engine; 
-var textures = {};  
+var textures = {}; 
+var myMaterials = {}; 
 var fog; 
+var texture_placeholder;
 
 // sound effect
 var boomSound; 
@@ -53,6 +53,7 @@ animate();
 // === FUNCTIONS ===
 function init() {
   initGraphics();
+  initTextures(); 
   initPlayer();
   initCubes();
   initRings();
@@ -64,6 +65,9 @@ function init() {
 
 function initEngine() {
   engine = new ParticleEngine();
+}
+
+function initTextures() {
 
   var loader = new THREE.TextureLoader(); 
   fireTexture = loader.load("effects/fire.png"); 
@@ -73,10 +77,42 @@ function initEngine() {
   laserTexture = loader.load("effects/laser.png"); 
   textures.laser = laserTexture; 
 
-  // var color = new THREE.Color(0.5, 0.5, 0.5); // gray for now
-  // fog = new THREE.FogExp2(color, 0.1); 
-  // fog.density = 0.1; 
-  // scene.fog = fog; 
+  var ddsLoader = new THREE.DDSLoader(); 
+  var map4 = ddsLoader.load( 'textures/explosion_dxt5_mip.dds' );
+  map4.anisotropy = 4;
+  myMaterials.fire = new THREE.MeshBasicMaterial( { map: map4, side: THREE.DoubleSide, blending: THREE.AdditiveBlending, depthTest: false, transparent: true } );
+
+  myMaterials.cloud = new THREE.MeshBasicMaterial( {
+        map: loader.load( 'textures/cloud.png' ),
+        depthTest: false,
+        transparent: true,
+        opacity: 0.8,
+        side: THREE.DoubleSide
+      } );
+
+  var materials = [
+
+    loadTexture( 'textures/skybox/px.jpg' ), // right
+    loadTexture( 'textures/skybox/nx.jpg' ), // left
+    loadTexture( 'textures/skybox/py.jpg' ), // top
+    loadTexture( 'textures/skybox/ny.jpg' ), // bottom
+    loadTexture( 'textures/skybox/pz.jpg' ), // back
+    loadTexture( 'textures/skybox/nz.jpg' )  // front
+
+  ];
+  myMaterials.skybox = materials; 
+
+  materials = [
+
+    loadTexture( 'textures/MilkyWay/dark-s_nx.jpg' ), // right
+    loadTexture( 'textures/MilkyWay/dark-s_ny.jpg' ), // left
+    loadTexture( 'textures/MilkyWay/dark-s_nz.jpg' ), // top
+    loadTexture( 'textures/MilkyWay/dark-s_px.jpg' ), // bottom
+    loadTexture( 'textures/MilkyWay/dark-s_py.jpg' ), // back
+    loadTexture( 'textures/MilkyWay/dark-s_pz.jpg' )  // front
+
+  ];
+  myMaterials.milkyway = materials;
 }
 
 function animate() {
@@ -96,6 +132,32 @@ function initGraphics() {
   scene = new THREE.Scene();
   // scene.add(new THREE.AmbientLight(0x707070)); // MEL: base light for debugging?
 
+  // background 
+  texture_placeholder = document.createElement( 'canvas' );
+  texture_placeholder.width = 128;
+  texture_placeholder.height = 128;
+  var context = texture_placeholder.getContext( '2d' );
+  context.fillStyle = 'rgb( 200, 200, 200 )';
+  context.fillRect( 0, 0, texture_placeholder.width, texture_placeholder.height );
+
+  var container = document.getElementById( 'container' );
+  var geometry = new THREE.BoxGeometry( 300, 300, 300, 7, 7, 7 );
+  geometry.scale( - 1, 1, 1 );
+
+materials = [
+
+    loadTexture( 'textures/MilkyWay/dark-s_nx.jpg' ), // right
+    loadTexture( 'textures/MilkyWay/dark-s_ny.jpg' ), // left
+    loadTexture( 'textures/MilkyWay/dark-s_nz.jpg' ), // top
+    loadTexture( 'textures/MilkyWay/dark-s_px.jpg' ), // bottom
+    loadTexture( 'textures/MilkyWay/dark-s_py.jpg' ), // back
+    loadTexture( 'textures/MilkyWay/dark-s_pz.jpg' )  // front
+
+  ];
+
+  mesh = new THREE.Mesh( geometry, materials );
+  scene.add( mesh );
+
   // renderer
   renderer = new THREE.WebGLRenderer();
   renderer.setSize(window.innerWidth, window.innerHeight);
@@ -111,6 +173,23 @@ function initGraphics() {
   document.body.appendChild( stats.domElement );
 }
 
+function loadTexture( path ) {
+
+  var texture = new THREE.Texture( texture_placeholder );
+  var material = new THREE.MeshBasicMaterial( { map: texture, overdraw: 0.5 } );
+
+  var image = new Image();
+  image.onload = function () {
+
+    texture.image = this;
+    texture.needsUpdate = true;
+
+  };
+  image.src = path;
+
+  return material;
+
+}
 function initPlayer() {
   playerSpeed = playerSpeedupRate*(time - ringSpeedupOffset) + playerBaseSpeed;
   
@@ -177,7 +256,14 @@ function initCubes() {
   for (var i = 0; i < cubeCount; i++) {
     var index = Math.floor(materials.length*Math.random());
     var material = materials[index];
-    var cube = new THREE.Mesh(geometry, material);
+
+    var rand = Math.random(); 
+    var randMat;
+    if (rand > 0.5)
+      randMat = myMaterials.fire; 
+    else
+      randMat =  myMaterials.cloud;
+    var cube = new THREE.Mesh(geometry, myMaterials.fire);
 
     var R2 = visibleRadius*visibleRadius;
     var x, y, z;
@@ -234,6 +320,12 @@ function updateCubes(deltaTime) {
     if (playerPosition.distanceToSquared(cube.position) > visibleRadius*visibleRadius) {
       cube.position.sub(playerPosition).normalize().multiplyScalar(-visibleRadius).add(playerPosition);
     }
+
+    // jess - lol
+    var time = Date.now() * 0.001;
+    cube.rotation.x = time;
+    cube.rotation.y = time;
+
   }
 }
 
