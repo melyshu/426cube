@@ -26,7 +26,7 @@ THREE.PlayerControls = function() {
       case 68: // d
         scope.moveRight = true;
         break;
-      case 13: // shift
+      case 13: // enter
         scope.changeAnimal = true;
         break;
       case 75: // k
@@ -53,7 +53,7 @@ THREE.PlayerControls = function() {
       case 68: // d
         scope.moveRight = false;
         break;
-      case 13: // shift
+      case 13: // enter
         scope.changeAnimal = false;
         break;
       case 75: // k
