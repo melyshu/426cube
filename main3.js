@@ -5,7 +5,7 @@ var camera, scene, renderer, controls, stats;
 
 // player
 var player = {};
-var playerBaseSpeed = 5;
+var playerBaseSpeed = 10;
 var playerSpeedupRate = 0.03;
 var playerSpeed = 0;
 var playerRotationRate = 0.3;
@@ -17,9 +17,10 @@ var cameraCentering = 2;
 
 // cubes
 var cubes = [];
-var cubeCount = 1000;
+var cubeCount = 2000;
 var cubeColorCount = 5;
 var visibleRadius = 50;
+var repositionNoise = 10;
 
 // rings
 var rings = [];
@@ -370,13 +371,35 @@ function render() {
   renderer.render(scene, camera);
 }
 
+function randUnit() {
+  var x, y, z, rsq; 
+  do {
+      x = 1.0 - 2.0*Math.random(); 
+      y = 1.0 - 2.0*Math.random(); 
+      z = 1.0 - 2.0*Math.random(); 
+      rsq = x*x + y*y + x*x;
+  }
+  while (rsq > 1.0);
+  
+  return new THREE.Vector3(x, y, z);
+}
+
+function reposition(v) {
+  var orig = v.clone();
+  var r = orig.clone().sub(player.object.position);
+  r.setLength(-visibleRadius).addScaledVector(randUnit(), repositionNoise).setLength(visibleRadius - Math.random()*repositionNoise);
+  r.add(player.object.position);
+  return r;
+}
+
 function updateRings(deltaTime) {
   var playerPosition = player.object.position;
   var playerToCamera = camera.position.clone().sub(player.object.position).normalize();
   for (var i = 0; i < rings.length; i++) {
     var ring = rings[i];
     if (playerPosition.distanceToSquared(ring.position) > visibleRadius*visibleRadius) {
-      ring.position.sub(playerPosition).normalize().multiplyScalar(-visibleRadius).add(playerPosition);
+      var p = reposition(ring.position);
+      ring.position.copy(p);
       ring.material = ringmaterial;
     }
     ring.lookAt(player.object.position.clone().add(playerToCamera.multiplyScalar(1.5)));
@@ -388,13 +411,13 @@ function updateCubes(deltaTime) {
   for (var i = 0; i < cubes.length; i++) {
     var cube = cubes[i];
     if (playerPosition.distanceToSquared(cube.position) > visibleRadius*visibleRadius) {
-      cube.position.sub(playerPosition).normalize().multiplyScalar(-visibleRadius).add(playerPosition);
+      var p = reposition(cube.position);
+      cube.position.copy(p);
     }
 
     // jess - lol
-    var time = Date.now() * 0.001;
-    cube.rotation.x = time;
-    cube.rotation.y = time;
+    cube.rotation.x += deltaTime;
+    cube.rotation.y += deltaTime;
 
   }
 }
