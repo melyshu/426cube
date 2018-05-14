@@ -10,6 +10,9 @@ var playerSpeedupRate = 0.03;
 var playerSpeed = 0;
 var playerRotationRate = 0.3;
 var playerScore = 0;
+var cameraPlayerDistance = 4;
+var cameraUpDistance = 1;
+var cameraCentering = 2;
 
 // cubes
 var cubes = [];
@@ -28,8 +31,11 @@ var ringSpeedupOffsetRate = 3;
 var ringmaterial;
 var ringmaterialVisited;
 
-// score and speed tracker (temp values initially to set size)
-var infoText = [1, 1];
+// score and speed tracker
+var htmlScoreDiv;
+var htmlSpeedDiv;
+var htmlGameOverDiv;
+var htmlResetDiv;
 
 // clock
 var clock = new THREE.Clock();
@@ -66,6 +72,7 @@ animate();
 function init() {
 
   initAnimals();
+  initHtml();
   initTextures();
   initGraphics();
 	initSounds();
@@ -74,6 +81,16 @@ function init() {
   initRings();
   initInput();
   initEngine();
+}
+
+function initHtml() {
+  htmlScoreDiv = document.getElementById('score');
+  htmlSpeedDiv = document.getElementById('speed');
+  htmlGameOverDiv = document.getElementById('gameover');
+  htmlResetDiv = document.getElementById('reset');
+  htmlResetDiv.onclick = function() {
+    htmlGameOverDiv.style = "display: none;";
+  }
 }
 
 function initEngine() {
@@ -148,8 +165,8 @@ function initGraphics() {
 
   // camera
   camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
-  camera.position.set(0, 0, 0);
-	camera.target = new THREE.Vector3( 0, 120, 0 ); // @TODO
+  // camera.position.set(0, 0, 0);
+	// camera.target = new THREE.Vector3( 0, 120, 0 ); // @TODO
 
   // scene
   scene = new THREE.Scene();
@@ -192,6 +209,13 @@ function initGraphics() {
   stats.domElement.style.position = 'absolute';
   stats.domElement.style.top = '0px';
   document.body.appendChild( stats.domElement );
+  
+  // resize updates
+  window.addEventListener('resize', function() {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize( window.innerWidth, window.innerHeight );
+  }, false);
 }
 
 function loadTexture( path ) {
@@ -224,6 +248,7 @@ function initPlayer() {
   playerSpeed = playerSpeedupRate*(time - ringSpeedupOffset) + playerBaseSpeed;
 
   player.position = new THREE.Vector3(0, 0, 0);
+  camera.position.set(0, cameraUpDistance, -cameraPlayerDistance);
   player.velocity = new THREE.Vector3(0, 0, playerSpeed);
   player.up = new THREE.Vector3(0, 1, 0);
   player.size = 0.5;
@@ -251,17 +276,6 @@ function initPlayer() {
 
   // scene.add(player.object);
   // scene.add(player.light);
-
-  for (var i = 0; i < infoText.length; i++) {
-    infoText[i] = document.createElement('div');
-    infoText[i].style.position = 'absolute';
-    infoText[i].style.color = "white";
-    infoText[i].innerHTML = "Player Speed: " + playerSpeed.toFixed(3); // tracks speed of player
-    var offset = 12 + i*20;
-    infoText[i].style.top = offset + 'px';
-    infoText[i].style.right = 12 + 'px';
-    document.body.appendChild(infoText[i]);
-  }
 }
 
 function initRings() {
@@ -358,6 +372,7 @@ function updateRings(deltaTime) {
     var ring = rings[i];
     if (playerPosition.distanceToSquared(ring.position) > visibleRadius*visibleRadius) {
       ring.position.sub(playerPosition).normalize().multiplyScalar(-visibleRadius).add(playerPosition);
+      ring.material = ringmaterial;
     }
     ring.lookAt(player.object.position.clone().add(playerToCamera.multiplyScalar(1.5)));
   }
@@ -425,17 +440,18 @@ function updatePlayer(deltaTime) {
 		}
 		prevChangeAnimal = controls.changeAnimal;
 
-	  // change player speed if in ring
+	  // detect ring visits
 	  for (var i = 0; i < rings.length; i++) {
 	    var ring = rings[i];
 	    var playerPosition = player.object.position;
 	    var ringPosition = ring.position;
 	    if (playerPosition.distanceTo(ringPosition) <= torusRadius) {
-	      player.velocity.addScaledVector(player.velocity, -1/10);
-	      ringSpeedupOffset += deltaTime*ringSpeedupOffsetRate;
+        // MEL: no more speed modifications
+	      // player.velocity.addScaledVector(player.velocity, -1/10);
+	      // ringSpeedupOffset += deltaTime*ringSpeedupOffsetRate;
 
         // use this as a flag for ring visited
-        if (ring.material.emissiveIntensity == 1) {
+        if (ring.material === ringmaterial) {
           playerScore++;
           ring.material = ringmaterialVisited;
           dingSound.play();
@@ -444,9 +460,10 @@ function updatePlayer(deltaTime) {
 	  }
 
     // update score
-    infoText[0].innerHTML = "Score: " + playerScore;
+    htmlScoreDiv.innerHTML = `Score: ${playerScore}`;
+    
 	  //update speed tracker
-	  infoText[1].innerHTML = "Player Speed: " + playerSpeed.toFixed(3);
+	  htmlSpeedDiv.innerHTML = `Speed: ${playerSpeed.toFixed(3)}`;
 
 	  // Update the position using the changed delta
 	  player.object.position.addScaledVector(player.velocity, deltaTime);
@@ -460,10 +477,10 @@ function updatePlayer(deltaTime) {
 	  player.object.up = player.up;
 
 	  // check for player collision with cube
-	  // if (handleCubeCollision(player.object)) {
-	  //    console.log("player collision");
-	  //    displayGameOver(); 
-	  // }
+	  if (handleCubeCollision(player.object)) {
+      // YOU LOST LEL
+      htmlGameOverDiv.style = "";
+	  }
 
 	  player.object.lookAt(camera.position.clone().addScaledVector(player.velocity, 1));
 
@@ -480,11 +497,20 @@ function killPlayer(mesh) {
 
 // moves the location of the camera
 function updateCamera(deltaTime) {
-
+  
+  var follow = camera.position.clone().addScaledVector(player.up, -cameraUpDistance).sub(player.object.position).setLength(cameraPlayerDistance).add(player.object.position).addScaledVector(player.up, cameraUpDistance);
+  var behind = player.object.position.clone().addScaledVector(player.velocity.clone().normalize(), -cameraPlayerDistance).addScaledVector(player.up, cameraUpDistance);
+  
+  camera.position.copy(behind.multiplyScalar(deltaTime*cameraCentering).addScaledVector(follow, 1-deltaTime*cameraCentering));
+  
+  var up = camera.up.clone().multiplyScalar(1 - deltaTime*cameraCentering).addScaledVector(player.up, deltaTime*cameraCentering).normalize();
+  
+  camera.up.copy(up);
+  
 // @TODO
-  var pos = player.object.position.clone().addScaledVector(player.velocity.clone().normalize(), -3).addScaledVector(player.up, 1);
-  camera.position.copy(pos);
-  camera.up.copy(player.up);
+  // var pos = player.object.position.clone().addScaledVector(player.velocity.clone().normalize(), -3).addScaledVector(player.up, 1);
+  // camera.position.copy(pos);
+  // camera.up.copy(player.up);
   camera.lookAt(player.object.position);
 }
 
@@ -516,23 +542,6 @@ function killAmmo(object) {
   object.alive = false;
 }
 
-function displayGameOver(gameOver) {
-  if (gameOver) {
-  var text = document.createElement('div'); 
-  text.style.position = 'fixed'; 
-  text.style.color = "white"; 
-  text.style.background = '#ffffff'; 
-  text.style.opacity = 0.5; 
-  text.innerHTML = "GAME OVER \n SCORE " + playerScore; 
-  text.style.top = '50%'; 
-  text.style.right = '50%'; 
-  text.style.width = '220px'; 
-  text.style.margin = 'auto'; 
-  text.style.textalign = 'center'; 
-  document.body.appendChild(text); 
-  }
-}
-
 // checks if collision with any cubes with mesh
 function handleCubeCollision(mesh) {
 
@@ -562,9 +571,6 @@ function handleCubeCollision(mesh) {
 
 function updateSpeed() {
   playerSpeed = playerSpeedupRate*(time - ringSpeedupOffset) + playerBaseSpeed;
-
-  // updates speedtracker
-  infoText.innerHTML = "Player Speed: " + playerSpeed.toFixed(3);
 }
 
 function initInput() {
