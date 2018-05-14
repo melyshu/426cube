@@ -42,6 +42,7 @@ var textures = {};
 var myMaterials = {}; 
 var fog; 
 var texture_placeholder;
+var milkyBox;
 
 // sound effect
 var boomSound; 
@@ -52,8 +53,8 @@ animate();
 
 // === FUNCTIONS ===
 function init() {
-  initGraphics();
   initTextures(); 
+  initGraphics();
   initPlayer();
   initCubes();
   initRings();
@@ -80,7 +81,7 @@ function initTextures() {
   var ddsLoader = new THREE.DDSLoader(); 
   var map4 = ddsLoader.load( 'textures/explosion_dxt5_mip.dds' );
   map4.anisotropy = 4;
-  myMaterials.fire = new THREE.MeshBasicMaterial( { map: map4, side: THREE.DoubleSide, blending: THREE.AdditiveBlending, depthTest: false, transparent: true } );
+  myMaterials.fire = new THREE.MeshBasicMaterial( { map: map4, side: THREE.DoubleSide, blending: THREE.AdditiveBlending, depthTest: true, transparent: true } );
 
   myMaterials.cloud = new THREE.MeshBasicMaterial( {
         map: loader.load( 'textures/cloud.png' ),
@@ -104,12 +105,12 @@ function initTextures() {
 
   materials = [
 
-    loadTexture( 'textures/MilkyWay/dark-s_nx.jpg' ), // right
-    loadTexture( 'textures/MilkyWay/dark-s_ny.jpg' ), // left
-    loadTexture( 'textures/MilkyWay/dark-s_nz.jpg' ), // top
     loadTexture( 'textures/MilkyWay/dark-s_px.jpg' ), // bottom
+    loadTexture( 'textures/MilkyWay/dark-s_nx.jpg' ), // right
     loadTexture( 'textures/MilkyWay/dark-s_py.jpg' ), // back
-    loadTexture( 'textures/MilkyWay/dark-s_pz.jpg' )  // front
+    loadTexture( 'textures/MilkyWay/dark-s_ny.jpg' ), // left
+    loadTexture( 'textures/MilkyWay/dark-s_pz.jpg' ),  // front
+    loadTexture( 'textures/MilkyWay/dark-s_nz.jpg' ) // top
 
   ];
   myMaterials.milkyway = materials;
@@ -144,19 +145,8 @@ function initGraphics() {
   var geometry = new THREE.BoxGeometry( 300, 300, 300, 7, 7, 7 );
   geometry.scale( - 1, 1, 1 );
 
-materials = [
-
-    loadTexture( 'textures/MilkyWay/dark-s_nx.jpg' ), // right
-    loadTexture( 'textures/MilkyWay/dark-s_ny.jpg' ), // left
-    loadTexture( 'textures/MilkyWay/dark-s_nz.jpg' ), // top
-    loadTexture( 'textures/MilkyWay/dark-s_px.jpg' ), // bottom
-    loadTexture( 'textures/MilkyWay/dark-s_py.jpg' ), // back
-    loadTexture( 'textures/MilkyWay/dark-s_pz.jpg' )  // front
-
-  ];
-
-  mesh = new THREE.Mesh( geometry, materials );
-  scene.add( mesh );
+  milkyBox = new THREE.Mesh( geometry, myMaterials.milkyway );
+  scene.add( milkyBox );
 
   // renderer
   renderer = new THREE.WebGLRenderer();
@@ -258,12 +248,6 @@ function initCubes() {
     var index = Math.floor(materials.length*Math.random());
     var material = materials[index];
 
-    var rand = Math.random(); 
-    var randMat;
-    if (rand > 0.5)
-      randMat = myMaterials.fire; 
-    else
-      randMat =  myMaterials.cloud;
     var cube = new THREE.Mesh(geometry, myMaterials.fire);
 
     var R2 = visibleRadius*visibleRadius;
@@ -370,6 +354,7 @@ function updatePlayer(deltaTime) {
   // Update the position using the changed delta
   player.object.position.addScaledVector(player.velocity, deltaTime);
   player.light.position.copy(player.object.position);
+  milkyBox.position.copy(player.object.position);
   player.velocity = velocity;
   player.up = up;
 
