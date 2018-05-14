@@ -57,12 +57,20 @@ var boomSound;
 var dingSound; 
 var miiSound; 
 var backgroundSound; 
+var currSound = 0; 
+var sounds = []; 
+var prevChangeSound = false; 
 
 // animal player
 var myAnimalIndex = 0;
 var animals = [];
 var mixer;
 var prevChangeAnimal = false;
+const animal = {
+  BUTTERFLY: 0, 
+  EAGLE: 1,
+  FOX: 2
+}
 
 // === MAIN CODE ===
 init();
@@ -100,8 +108,15 @@ function initEngine() {
 function initSounds() {
   boomSound = new Audio("effects/boom.mp3");
   dingSound = new Audio("effects/ding.mp3"); 
-  miiSound = new Audio("effects/mii.mp3"); 
   backgroundSound = new Audio("effects/background.mp3"); 
+  miiSound = new Audio("effects/mii.mp3"); 
+  foxSound = new Audio("effects/fox.mp3"); 
+
+  sounds[0] = miiSound; 
+  sounds[1] = backgroundSound; 
+  sounds[2] = foxSound; 
+  sounds[currSound].play(); 
+  sounds[currSound].loop = true; 
 }
 function initTextures() {
 
@@ -244,6 +259,27 @@ function initAnimals() {
 	]
 }
 
+function loadAnimalMesh(animal, mesh) {
+  var loader = new THREE.JSONLoader();
+  loader.load( animals[animal].model, function( geometry ) {
+
+    mesh = new THREE.Mesh( geometry, new THREE.MeshLambertMaterial( {
+      vertexColors: THREE.FaceColors,
+      morphTargets: true
+    } ) );
+    var animalSize = animals[animal].size;
+    mesh.scale.set( animalSize, animalSize, animalSize ); //@TODO:
+  //  mesh.position.copy(mesh.position);
+    scene.add( mesh );
+
+    mixer = new THREE.AnimationMixer( mesh );
+
+    var clip = THREE.AnimationClip.CreateFromMorphTargetSequence( 'gallop', geometry.morphTargets, 30 );
+    mixer.clipAction( clip ).setDuration( 1 ).play();
+
+  } );
+}
+
 function initPlayer() {
   playerSpeed = playerSpeedupRate*(time - ringSpeedupOffset) + playerBaseSpeed;
 
@@ -253,6 +289,8 @@ function initPlayer() {
   player.up = new THREE.Vector3(0, 1, 0);
   player.size = 0.5;
 
+
+  //loadAnimalMesh(myAnimalIndex, player.object); // i will fix this 
 	var loader = new THREE.JSONLoader();
 	loader.load( animals[myAnimalIndex].model, function( geometry ) {
 
@@ -270,12 +308,6 @@ function initPlayer() {
 		mixer.clipAction( clip ).setDuration( 1 ).play();
 
 	} );
-  // player.object = new THREE.Mesh(new THREE.CubeGeometry(player.size, player.size, player.size), new THREE.MeshNormalMaterial());
-  // player.light = new THREE.PointLight(0xffffff, 1, 50, 2);
-  // player.light.position.set(0, 0, 0);
-
-  // scene.add(player.object);
-  // scene.add(player.light);
 }
 
 function initRings() {
@@ -336,6 +368,7 @@ function initCubes() {
     cube.position.set(x, y, z);
 
     scene.add(cube);
+
     cubes.push(cube);
   }
 }
@@ -436,6 +469,8 @@ function updatePlayer(deltaTime) {
 				var clip = THREE.AnimationClip.CreateFromMorphTargetSequence( 'gallop', geometry.morphTargets, 30 );
 				mixer.clipAction( clip ).setDuration( 1 ).play();
 
+        // change sound
+        updateSound(myAnimalIndex); 
 			} );
 		}
 		prevChangeAnimal = controls.changeAnimal;
@@ -493,6 +528,14 @@ function updatePlayer(deltaTime) {
 }
 function killPlayer(mesh) {
   scene.remove(mesh);
+}
+
+function updateSound(newSound) {
+  sounds[currSound].pause(); 
+  currSound = newSound; 
+  console.log("new sound" + currSound); 
+  sounds[currSound].play(); 
+  sounds[currSound].loop = true;  
 }
 
 // moves the location of the camera
