@@ -390,7 +390,6 @@ function updateCamera(deltaTime) {
 function updateAmmoPhysics(deltaTime) {
   
   while (ammo.length > 0 && !ammo[0].alive) {
-    console.log(`Ammo is ${ammo.length} long`)
     ammo.shift();
   }
 
@@ -408,12 +407,8 @@ function updateAmmoPhysics(deltaTime) {
 
     // check for collisions with cubes
     if (handleCubeCollision(ammo[i].mesh)) { 
-      // ammo[i].mesh.material.transparent = true; 
-      // ammo[i].mesh.material.opacity = 0.0; 
       killAmmo(ammo[i]);
     }
-    //killObject(ammo[i].mesh); 
-   // ammo[i]._l.position.copy(ammo[i].mesh.position);
   }
 
 }
@@ -441,7 +436,7 @@ function handleCubeCollision(mesh) {
       boomSound.play(); 
 
       // origin, velocity, color, opacity, num, texture
-      //engine.createParticleCluster(mesh.position, 10, new THREE.Color(0xff0000), 0.8, 100, textures.fire); 
+      engine.createParticleCluster(mesh.position, 10, new THREE.Color(0xff0000), 0.8, 100, textures.fire); 
       return true; 
     }
   }

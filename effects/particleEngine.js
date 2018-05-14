@@ -39,9 +39,9 @@ ParticleCluster.prototype.initialize = function(origin, velocity, color, opacity
 	this.numParticles = num; 
 	for (var i = 0; i < this.numParticles; i++) {
 		var noise = 2;
-		var offsetX = Math.random()*noise - 2*noise; 
-		var offsetY = Math.random()*noise - 2*noise; 
-		var offsetZ = Math.random()*noise - 2*noise; 
+		var offsetX = 2*Math.random()*noise - noise; 
+		var offsetY = 2*Math.random()*noise - noise; 
+		var offsetZ = 2*Math.random()*noise - noise; 
 		var center = new THREE.Vector3(origin.x+offsetX, origin.y+offsetY, origin.z+offsetZ);
 		this.particleGeometry.vertices.push(center); 
 
