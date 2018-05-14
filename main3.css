@@ -54,3 +54,13 @@
     background-color: #000;
     color: #fff;
 }
+
+#tips {
+    position: absolute;
+    bottom: 15px;
+    left: 15px;
+    padding: 5px;
+    border-radius: 3px;
+    background-color: rgba(255, 255, 255, 0.9);
+    font-size: 0.7em;
+}

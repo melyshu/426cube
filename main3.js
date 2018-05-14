@@ -103,6 +103,11 @@ function initHtml() {
     // discard blurred time
     clock.getDelta();
   }
+  document.addEventListener('keydown', function(event) {
+    if (event.keyCode === 32 && playerGameOver) { // space
+      htmlResetDiv.onclick();
+    }
+  }, false);
 }
 
 function initEngine() {
