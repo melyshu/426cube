@@ -520,7 +520,7 @@ window.addEventListener( 'mousedown', function( event ) {
     // Creates a ball and throws it
     var ballMass = 35;
     var ballRadius = 0.4;
-    var ballMaterial = new THREE.MeshPhongMaterial( { color: 0xe0ffff, map: textures.water } );
+    var ballMaterial = new THREE.MeshPhongMaterial( { color: 0xe0ffff, map: textures.fire } );
 
     var ball = new THREE.Mesh( new THREE.SphereBufferGeometry( ballRadius, 9, 3 ), ballMaterial );
     ball.castShadow = true;
