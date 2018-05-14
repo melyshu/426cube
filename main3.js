@@ -9,7 +9,7 @@ var playerBaseSpeed = 5;
 var playerSpeedupRate = 0.03;
 var playerSpeed = 0;
 var playerRotationRate = 0.3;
-var playerScore = 0; 
+var playerScore = 0;
 
 // cubes
 var cubes = [];
@@ -29,7 +29,7 @@ var ringmaterial;
 var ringmaterialVisited;
 
 // score and speed tracker (temp values initially to set size)
-var infoText = [1, 1]; 
+var infoText = [1, 1];
 
 // clock
 var clock = new THREE.Clock();
@@ -48,15 +48,19 @@ var milkyBox;
 
 // sound effect
 var boomSound;
+<<<<<<< HEAD
 var dingSound; 
 var miiSound; 
 var backgroundSound; 
+=======
+var dingSound;
+>>>>>>> ba3a8e60f6bba416b2fbd26e5569c4623b539087
 
-// animal
-var animal;
+// animal player
+var myAnimal = 0;
+var animals = [];
 var mixer;
-var radius = 600;
-var theta = 0;
+var prevChangeAnimal = false;
 
 // === MAIN CODE ===
 init();
@@ -66,8 +70,9 @@ animate();
 function init() {
   initTextures();
   initGraphics();
-  initSounds(); 
-	// initAnimal();
+
+	initAnimals();
+	initSounds();
   initPlayer();
   initCubes();
   initRings();
@@ -84,8 +89,6 @@ function initSounds() {
   dingSound = new Audio("effects/ding.mp3"); 
   miiSound = new Audio("effects/mii.mp3"); 
   backgroundSound = new Audio("effects/background.mp3"); 
-  //miiSound.play(); 
-  miiSound.loop = true; 
 }
 function initTextures() {
 
@@ -158,7 +161,7 @@ function initGraphics() {
 	var light = new THREE.DirectionalLight( 0xffefef, 1.5 );
 	light.position.set( -1, -1, -1 ).normalize();
 	scene.add( light );
-  // scene.add(new THREE.AmbientLight(0x707070)); // MEL: base light for debugging?
+  scene.add(new THREE.AmbientLight(0x707070)); // MEL: base light for debugging?
 
   // background
   texture_placeholder = document.createElement( 'canvas' );
@@ -207,6 +210,14 @@ function loadTexture( path ) {
   return material;
 
 }
+
+function initAnimals() {
+	animals = [
+		{model: "js/models/butterfly.js", size: .1},
+		{model: "js/models/eagle.js", size: .01}
+	]
+}
+
 function initPlayer() {
   playerSpeed = playerSpeedupRate*(time - ringSpeedupOffset) + playerBaseSpeed;
 
@@ -216,13 +227,14 @@ function initPlayer() {
   player.size = 0.5;
 
 	var loader = new THREE.JSONLoader();
-	loader.load( "js/models/fish.js", function( geometry ) {
+	loader.load( animals[myAnimal].model, function( geometry ) {
 
 		player.object = new THREE.Mesh( geometry, new THREE.MeshLambertMaterial( {
 			vertexColors: THREE.FaceColors,
 			morphTargets: true
 		} ) );
-		player.object.scale.set( .01, .01, .01 ); //@TODO:
+		var animalSize = animals[myAnimal].size;
+		player.object.scale.set( animalSize, animalSize, animalSize ); //@TODO:
 		scene.add( player.object );
 
 		mixer = new THREE.AnimationMixer( player.object );
@@ -243,7 +255,7 @@ function initPlayer() {
     infoText[i].style.position = 'absolute';
     infoText[i].style.color = "white";
     infoText[i].innerHTML = "Player Speed: " + playerSpeed.toFixed(3); // tracks speed of player
-    var offset = 12 + i*20; 
+    var offset = 12 + i*20;
     infoText[i].style.top = offset + 'px';
     infoText[i].style.right = 12 + 'px';
     document.body.appendChild(infoText[i]);
@@ -387,6 +399,29 @@ function updatePlayer(deltaTime) {
 	  if (controls.moveLeft) {
 	    velocity.addScaledVector(right, -playerRotationRate).setLength(playerSpeed);
 	  }
+		if (controls.changeAnimal && !prevChangeAnimal) {
+			myAnimal = (myAnimal+1)%animals.length;
+			scene.remove(player.object);
+			var loader = new THREE.JSONLoader();
+			loader.load( animals[myAnimal].model, function( geometry ) {
+
+				player.object = new THREE.Mesh( geometry, new THREE.MeshLambertMaterial( {
+					vertexColors: THREE.FaceColors,
+					morphTargets: true
+				} ) );
+				var animalSize = animals[myAnimal].size;
+				player.object.scale.set( animalSize, animalSize, animalSize ); //@TODO:
+				player.object.position.copy(player.position);
+				scene.add( player.object );
+
+				mixer = new THREE.AnimationMixer( player.object );
+
+				var clip = THREE.AnimationClip.CreateFromMorphTargetSequence( 'gallop', geometry.morphTargets, 30 );
+				mixer.clipAction( clip ).setDuration( 1 ).play();
+
+			} );
+		}
+		prevChangeAnimal = controls.changeAnimal;
 
 	  // change player speed if in ring
 	  for (var i = 0; i < rings.length; i++) {
@@ -397,17 +432,17 @@ function updatePlayer(deltaTime) {
 	      player.velocity.addScaledVector(player.velocity, -1/10);
 	      ringSpeedupOffset += deltaTime*ringSpeedupOffsetRate;
 
-        // use this as a flag for ring visited 
+        // use this as a flag for ring visited
         if (ring.material.emissiveIntensity == 1) {
-          playerScore++; 
-          ring.material = ringmaterialVisited; 
-          dingSound.play(); 
+          playerScore++;
+          ring.material = ringmaterialVisited;
+          dingSound.play();
         }
 	    }
 	  }
 
     // update score
-    infoText[0].innerHTML = "Score: " + playerScore; 
+    infoText[0].innerHTML = "Score: " + playerScore;
 	  //update speed tracker
 	  infoText[1].innerHTML = "Player Speed: " + playerSpeed.toFixed(3);
 
@@ -436,6 +471,9 @@ function updatePlayer(deltaTime) {
 		mixer.update( ( deltaTime )  );
 
 	}
+}
+function killPlayer(mesh) {
+  scene.remove(mesh);
 }
 
 // moves the location of the camera

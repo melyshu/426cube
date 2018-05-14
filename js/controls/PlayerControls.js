@@ -5,6 +5,7 @@ THREE.PlayerControls = function() {
 	this.moveDown = false;
 	this.moveLeft = false;
 	this.moveRight = false;
+  this.changeAnimal = false;
 
 	var onKeyDown = function ( event ) {
     switch ( event.keyCode ) {
@@ -23,6 +24,9 @@ THREE.PlayerControls = function() {
       case 39: // right
       case 68: // d
         scope.moveRight = true;
+        break;
+      case 13: // shift
+        scope.changeAnimal = true;
         break;
     }
 	};
@@ -44,6 +48,9 @@ THREE.PlayerControls = function() {
       case 39: // right
       case 68: // d
         scope.moveRight = false;
+        break;
+      case 13: // shift
+        scope.changeAnimal = false;
         break;
     }
 	};
