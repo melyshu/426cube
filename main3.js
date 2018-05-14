@@ -10,6 +10,7 @@ var playerSpeedupRate = 0.03;
 var playerSpeed = 0;
 var playerRotationRate = 0.3;
 var playerScore = 0;
+var playerGameOver = false;
 var cameraPlayerDistance = 4;
 var cameraUpDistance = 1;
 var cameraCentering = 2;
@@ -88,6 +89,9 @@ function initHtml() {
   htmlResetDiv = document.getElementById('reset');
   htmlResetDiv.onclick = function() {
     htmlGameOverDiv.style = "display: none;";
+    playerGameOver = false;
+    time = 0;
+    playerScore = 0;
   }
 }
 
@@ -332,11 +336,12 @@ function initCubes() {
 
 // updates view
 function render() {
+  if (playerGameOver) return;
 
   // update time
   var deltaTime = clock.getDelta();
   time += deltaTime;
-
+  
   // update scene
   updateSpeed();
 
@@ -470,7 +475,7 @@ function updatePlayer(deltaTime) {
 	  if (handleCubeCollision(player.object)) {
       // YOU LOST LEL
       htmlGameOverDiv.style = "";
-	   // player.object.
+      playerGameOver = true;
 	  }
 
 	  player.object.lookAt(camera.position.clone().addScaledVector(player.velocity, 1));
