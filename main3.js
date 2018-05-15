@@ -138,7 +138,7 @@ function initEngine() {
 function initSounds() {
   boomSound = new Audio("effects/boom.mp3");
   dingSound = new Audio("effects/ding.mp3"); 
-  backgroundSound = new Audio("effects/background.mp3"); 
+  backgroundSound = new Audio("effects/stars.mp3"); 
   miiSound = new Audio("effects/mii.mp3"); 
   foxSound = new Audio("effects/fox.mp3"); 
 

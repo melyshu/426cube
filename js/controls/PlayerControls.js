@@ -12,7 +12,7 @@ THREE.PlayerControls = function() {
     switch ( event.keyCode ) {
       case 38: // up
       case 87: // w
-        scope.moveUp = true;
+        scope.moveDown = true;
         break;
       case 37: // left
       case 65: // a
@@ -20,7 +20,7 @@ THREE.PlayerControls = function() {
         break;
       case 40: // down
       case 83: // s
-        scope.moveDown = true;
+        scope.moveUp = true;
         break;
       case 39: // right
       case 68: // d
@@ -39,7 +39,7 @@ THREE.PlayerControls = function() {
     switch( event.keyCode ) {
       case 38: // up
       case 87: // w
-        scope.moveUp = false;
+        scope.moveDown = false;
         break;
       case 37: // left
       case 65: // a
@@ -47,7 +47,7 @@ THREE.PlayerControls = function() {
         break;
       case 40: // down
       case 83: // s
-        scope.moveDown = false;
+        scope.moveUp = false;
         break;
       case 39: // right
       case 68: // d

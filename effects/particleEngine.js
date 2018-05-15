@@ -54,16 +54,17 @@ ParticleCluster.prototype.initialize = function(origin, velocity, color, opacity
     
     this.velocities.push(new THREE.Vector3(x, y, z).multiplyScalar(this.speed));
     
-		var noise = 0.3;
-		var offsetX = 2*Math.random()*noise - noise; 
-		var offsetY = 2*Math.random()*noise - noise; 
-		var offsetZ = 2*Math.random()*noise - noise; 
-		var center = new THREE.Vector3(origin.x+offsetX, origin.y+offsetY, origin.z+offsetZ);
-    
-		this.particleGeometry.vertices.push(center); 
+	var noise = 0.3;
+	var offsetX = 2*Math.random()*noise - noise; 
+	var offsetY = 2*Math.random()*noise - noise; 
+	var offsetZ = 2*Math.random()*noise - noise; 
+	var center = new THREE.Vector3(origin.x+offsetX, origin.y+offsetY, origin.z+offsetZ);
 
-		this.ages.push(0) 
-		this.liveParticles.push(1);  
+	this.particleGeometry.vertices.push(center); 
+
+	this.ages.push(0) 
+	this.liveParticles.push(1);  
+	this.particleGeometry.colors[i] = this.color; 
 	}
 
 	this.particleMaterial = new THREE.PointsMaterial({
@@ -77,7 +78,7 @@ ParticleCluster.prototype.initialize = function(origin, velocity, color, opacity
 	});
 
 	this.particleGeometry.computeBoundingSphere(); 
-  this.particleGeometry.dynamic = true;
+  	this.particleGeometry.dynamic = true;
 	this.points = new THREE.Points(this.particleGeometry, this.particleMaterial);
 }
 
@@ -97,12 +98,18 @@ ParticleCluster.prototype.update = function(deltaTime)
     this.velocities[i].multiplyScalar(Math.pow(this.speedDecay, deltaTime));
     this.particleMaterial.opacity *= 0.9999; // have particles fade out 
 
+    var rand = Math.random()*10 - 5; 
+    this.particleGeometry.colors[i].multiplyScalar(rand);
+    //console.log(this.particleGeometry.colors[i]); 
+
+
 		this.ages[i] += deltaTime;
 		if (this.ages[i] > 1.5) {
 			this.liveParticles[i] = 0; 
 			//this.particleMaterial.opacity = 0.0; 
 		}
 	}
+	this.particleGeometry.colorsNeedUpdate = true; 
 	this.particleGeometry.verticesNeedUpdate = true; 
 }
 	
