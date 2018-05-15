@@ -17,7 +17,7 @@ var cameraCentering = 2;
 
 // cubes
 var cubes = [];
-var cubeCount = 2000;
+var cubeCount = 1500;
 var cubeColorCount = 5;
 var visibleRadius = 50;
 var repositionNoise = 10;
@@ -39,6 +39,8 @@ var htmlScoreDiv;
 var htmlSpeedDiv;
 var htmlGameOverDiv;
 var htmlResetDiv;
+var htmlFinalScoreDiv;
+var htmlFinalSpeedDiv;
 
 // clock
 var clock = new THREE.Clock();
@@ -100,6 +102,8 @@ function initHtml() {
   htmlSpeedDiv = document.getElementById('speed');
   htmlGameOverDiv = document.getElementById('gameover');
   htmlResetDiv = document.getElementById('reset');
+  htmlFinalScoreDiv = document.getElementById('final-score');
+  htmlFinalSpeedDiv = document.getElementById('final-speed');
   htmlResetDiv.onclick = function() {
     htmlGameOverDiv.style = "display: none;";
     playerGameOver = false;
@@ -112,12 +116,16 @@ function initHtml() {
     clock.getDelta();
   }
   document.addEventListener('keydown', function(event) {
-    if (event.keyCode === 32 && playerGameOver) { // space
-      htmlResetDiv.onclick();
+    if (event.keyCode === 32) { // space
+      if(playerGameOver) {
+        htmlResetDiv.onclick();
 
-      // reset rings 
-      for (var i = 0; i < rings.length; i++) {
-        rings[i].material = ringmaterial; 
+        // reset rings 
+        for (var i = 0; i < rings.length; i++) {
+          rings[i].material = ringmaterial; 
+        }
+      } else {
+        shootAmmo(new THREE.Vector2(0, 0.2));
       }
     }
   }, false);
@@ -437,7 +445,7 @@ function randUnit() {
 function reposition(v) {
   var orig = v.clone();
   var r = orig.clone().sub(player.object.position);
-  r.setLength(-visibleRadius).addScaledVector(randUnit(), repositionNoise).setLength(visibleRadius - Math.random()*repositionNoise);
+  r.setLength(-visibleRadius).addScaledVector(randUnit(), repositionNoise).setLength(visibleRadius);
   r.add(player.object.position);
   return r;
 }
@@ -532,7 +540,7 @@ function updatePlayer(deltaTime) {
 
         // use this as a flag for ring visited
         if (ring.material === ringmaterial) {
-          playerScore++;
+          playerScore += playerSpeed;
           ring.material = ringmaterialVisited;
           dingSound.play();
         }
@@ -540,10 +548,13 @@ function updatePlayer(deltaTime) {
 	  }
 
     // update score
-    htmlScoreDiv.innerHTML = `Score: ${playerScore}`;
+    htmlScoreDiv.innerHTML = `score: ${playerScore.toFixed(3)}`;
     
 	  //update speed tracker
-	  htmlSpeedDiv.innerHTML = `Speed: ${playerSpeed.toFixed(3)}`;
+	  htmlSpeedDiv.innerHTML = `speed: ${playerSpeed.toFixed(3)}`;
+    
+    htmlFinalScoreDiv.innerHTML = `final score: ${playerScore.toFixed(3)}`;
+    htmlFinalSpeedDiv.innerHTML = `final speed: ${playerSpeed.toFixed(3)}`;
 
 	  // Update the position using the changed delta
 	  player.object.position.addScaledVector(player.velocity, deltaTime);
@@ -652,6 +663,7 @@ function handleCubeCollision(mesh) {
       // origin, velocity, color, opacity, num, texture
       var currTexture = textures[myAnimalIndex].fire; 
       engine.createParticleCluster(mesh.position, 10, new THREE.Color(0xffffff), 1.0, 100, currTexture);
+      playerScore = Math.max(playerScore - 1, 0);
       return true;
     }
   }
@@ -673,36 +685,39 @@ window.addEventListener( 'mousedown', function( event ) {
       - ( event.clientY / window.innerHeight ) * 2 + 1
     );
 
-    var raycaster = new THREE.Raycaster();
-
-    raycaster.setFromCamera( mouseCoords, camera);
-
-    var direction = new THREE.Vector3(raycaster.ray.direction.x, raycaster.ray.direction.y, raycaster.ray.direction.z);
-    var origin = new THREE.Vector3(raycaster.ray.origin.x, raycaster.ray.origin.y, raycaster.ray.origin.z);
-
-    // Creates a ball and throws it
-    var ballMass = 35;
-    var ballRadius = 0.4;
-    var ballMaterial = new THREE.MeshPhongMaterial( { color: 0xe0ffff, map: textures[myAnimalIndex].fire } );
-
-    var ball = new THREE.Mesh( new THREE.SphereBufferGeometry( ballRadius, 9, 3 ), ballMaterial );
-    ball.castShadow = true;
-    ball.receiveShadow = true;
-
-    ball.position.x = direction.x + origin.x;
-    ball.position.y = direction.y + origin.y;
-    ball.position.z = direction.z + origin.z;
-
-    var offset = player.object.position.clone().sub(camera.position);
-    ball.position.add(offset);
-
-    var velocity = new THREE.Vector3(direction.x, direction.y, direction.z);
-    velocity.multiplyScalar(40 + 1.5*playerSpeed);
-
-    var newAmmo = new myAmmo(ball, velocity, ammo.length);
-    scene.add(ball);
-    ammo.push(newAmmo);
-
+    shootAmmo(mouseCoords);
 
   }, false );
+}
+
+function shootAmmo(mouseCoords) {
+  var raycaster = new THREE.Raycaster();
+
+  raycaster.setFromCamera( mouseCoords, camera);
+
+  var direction = new THREE.Vector3(raycaster.ray.direction.x, raycaster.ray.direction.y, raycaster.ray.direction.z);
+  var origin = new THREE.Vector3(raycaster.ray.origin.x, raycaster.ray.origin.y, raycaster.ray.origin.z);
+
+  // Creates a ball and throws it
+  var ballMass = 35;
+  var ballRadius = 0.4;
+  var ballMaterial = new THREE.MeshPhongMaterial( { color: 0xe0ffff, map: textures[myAnimalIndex].fire } );
+
+  var ball = new THREE.Mesh( new THREE.SphereBufferGeometry( ballRadius, 9, 3 ), ballMaterial );
+  ball.castShadow = true;
+  ball.receiveShadow = true;
+
+  ball.position.x = direction.x + origin.x;
+  ball.position.y = direction.y + origin.y;
+  ball.position.z = direction.z + origin.z;
+
+  var offset = player.object.position.clone().sub(camera.position);
+  ball.position.add(offset);
+
+  var velocity = new THREE.Vector3(direction.x, direction.y, direction.z);
+  velocity.multiplyScalar(40 + 1.5*playerSpeed);
+
+  var newAmmo = new myAmmo(ball, velocity, ammo.length);
+  scene.add(ball);
+  ammo.push(newAmmo);
 }
