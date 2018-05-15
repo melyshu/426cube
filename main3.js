@@ -715,7 +715,9 @@ function shootAmmo(mouseCoords) {
   ball.position.add(offset);
 
   var velocity = new THREE.Vector3(direction.x, direction.y, direction.z);
-  velocity.multiplyScalar(40 + 1.5*playerSpeed);
+  velocity.add(player.velocity); 
+  velocity.normalize(); 
+  velocity.multiplyScalar(40 + 2*playerSpeed);
 
   var newAmmo = new myAmmo(ball, velocity, ammo.length);
   scene.add(ball);
