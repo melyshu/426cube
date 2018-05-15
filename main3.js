@@ -336,7 +336,7 @@ function initRings() {
 
   // set up torus mesh
   var ringgeometry = new THREE.TorusGeometry(torusRadius, tubeRadius, 32, 100);
-  ringmaterial = new THREE.MeshPhongMaterial( { color: 0xffff00, emissive: 0x200020, emissiveIntensity: 1 } );
+  ringmaterial = new THREE.MeshPhongMaterial( { color: 0xf2e6ff, emissive: 0x200020, emissiveIntensity: 1 } );
   ringmaterialVisited = new THREE.MeshPhongMaterial( { color: 0xff00ff, emissive: 0x200020, emissiveIntensity: 0});
 
   // TODO: randomize orientation of ring
@@ -651,7 +651,7 @@ function handleCubeCollision(mesh) {
 
       // origin, velocity, color, opacity, num, texture
       var currTexture = textures[myAnimalIndex].fire; 
-      engine.createParticleCluster(mesh.position, 10, new THREE.Color(0x000000), 0.2, 100, currTexture);
+      engine.createParticleCluster(mesh.position, 10, new THREE.Color(0xffffff), 1.0, 100, currTexture);
       return true;
     }
   }
