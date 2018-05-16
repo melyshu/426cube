@@ -68,3 +68,23 @@
 #try-again {
     margin-top: 15px;
 }
+
+#names {
+    position: absolute;
+    top: 15px;
+    left: 15px;
+    padding: 5px;
+    border-radius: 3px;
+    background-color: rgba(255, 255, 255, 0.9);
+}
+
+#title {
+    color: rgb(200, 10, 10);
+    font-style: italic;
+    font-size: 2em;
+    font-family: 'Titan One';
+}
+
+#netids {
+    font-size: 0.7em;
+}

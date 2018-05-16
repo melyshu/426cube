@@ -244,6 +244,11 @@ function initGraphics() {
   // renderer
   renderer = new THREE.WebGLRenderer();
   renderer.setSize(window.innerWidth, window.innerHeight);
+  renderer.domElement.style.position = 'fixed';
+  renderer.domElement.style.top = '0';
+  renderer.domElement.style.bottom = '0';
+  renderer.domElement.style.left = '0';
+  renderer.domElement.style.right = '0';
   document.body.appendChild(renderer.domElement);
 
   // controls
@@ -251,8 +256,11 @@ function initGraphics() {
 
   // stats
   stats = new Stats();
-  stats.domElement.style.position = 'absolute';
-  stats.domElement.style.top = '0px';
+  stats.domElement.style.position = 'fixed';
+  stats.domElement.style.top = null;
+  stats.domElement.style.left = null;
+  stats.domElement.style.right = '15px';
+  stats.domElement.style.bottom = '15px';
   document.body.appendChild( stats.domElement );
   
   // resize updates
@@ -589,8 +597,7 @@ function killPlayer(mesh) {
 
 function updateSound(newSound) {
   sounds[currSound].pause(); 
-  currSound = newSound; 
-  console.log("new sound" + currSound); 
+  currSound = newSound;  
   sounds[currSound].play(); 
   sounds[currSound].loop = true;  
 }
@@ -715,7 +722,8 @@ function shootAmmo(mouseCoords) {
   ball.position.add(offset);
 
   var velocity = new THREE.Vector3(direction.x, direction.y, direction.z);
-  velocity.multiplyScalar(40 + 1.5*playerSpeed);
+  velocity.add(player.velocity); 
+  velocity.setLength(40 + 2*playerSpeed);
 
   var newAmmo = new myAmmo(ball, velocity, ammo.length);
   scene.add(ball);
