@@ -149,7 +149,15 @@ function initSounds() {
   sounds[0] = miiSound; 
   sounds[1] = backgroundSound; 
   sounds[2] = foxSound; 
-  sounds[currSound].play(); 
+  
+  var soundOn = function() {
+    sounds[currSound].play().catch(err => {
+      setTimeout(soundOn, 1000);
+    });
+  }
+  
+  soundOn();
+  //sounds[currSound].play(); 
   sounds[currSound].loop = true; 
 }
 function initTextures() {
