@@ -21,7 +21,7 @@ function ParticleCluster()
 	this.numParticles = 25;
 
 	this.color   = new THREE.Color();
-	this.opacity = 1.0;
+	this.opacity;
 	this.size = 1.0;
 			
 	this.ages = []; 
@@ -39,6 +39,8 @@ ParticleCluster.prototype.initialize = function(origin, velocity, color, opacity
 	this.origin.copy(origin); 
 	this.velocity = velocity; 
 	this.numParticles = num; 
+	this.opacity = opacity; 
+	this.color = color; 
 	for (var i = 0; i < this.numParticles; i++) {
     
     var x, y, z, rsq; 
@@ -93,7 +95,7 @@ ParticleCluster.prototype.update = function(deltaTime)
 
     vertices[i].addScaledVector(this.velocities[i], deltaTime);
     this.velocities[i].multiplyScalar(Math.pow(this.speedDecay, deltaTime));
-    //console.log(this.velocity);
+    this.particleMaterial.opacity *= 0.9999; // have particles fade out 
 
 		this.ages[i] += deltaTime;
 		if (this.ages[i] > 1.5) {
