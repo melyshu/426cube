@@ -10,6 +10,7 @@ var playerSpeedupRate = 0.03;
 var playerSpeed = 0;
 var playerRotationRate = 0.3;
 var playerScore = 0;
+var playerBest = 0;
 var playerGameOver = false;
 var cameraPlayerDistance = 4;
 var cameraUpDistance = 1;
@@ -35,6 +36,7 @@ var ringmaterialVisited;
 
 // score and speed tracker
 var htmlOverlayDiv;
+var htmlBestDiv;
 var htmlScoreDiv;
 var htmlSpeedDiv;
 var htmlGameOverDiv;
@@ -98,6 +100,7 @@ function init() {
 
 function initHtml() {
   htmlOverlayDiv = document.getElementById('overlay');
+  htmlBestDiv = document.getElementById('best');
   htmlScoreDiv = document.getElementById('score');
   htmlSpeedDiv = document.getElementById('speed');
   htmlGameOverDiv = document.getElementById('gameover');
@@ -109,6 +112,7 @@ function initHtml() {
     playerGameOver = false;
     time = 0;
     clock.getDelta();
+    playerBest = Math.max(playerBest, playerScore);
     playerScore = 0;
   }
   window.onfocus = function() {
@@ -417,6 +421,8 @@ function render() {
 
   // update time
   var deltaTime = clock.getDelta();
+  if (deltaTime > 1) deltaTime = clock.getDelta();
+  
   time += deltaTime;
   
   // update scene
@@ -556,6 +562,7 @@ function updatePlayer(deltaTime) {
 	  }
 
     // update score
+    htmlBestDiv.innerHTML = `best: ${playerBest.toFixed(3)}`
     htmlScoreDiv.innerHTML = `score: ${playerScore.toFixed(3)}`;
     
 	  //update speed tracker
@@ -574,11 +581,14 @@ function updatePlayer(deltaTime) {
 
 	  // make the player look at the camera
 	  player.object.up = player.up;
-
+  
+    var oldScore = playerScore;
+  
 	  // check for player collision with cube
 	  if (handleCubeCollision(player.object)) {
       // YOU LOST LEL
       htmlGameOverDiv.style = "";
+      playerBest = Math.max(playerBest, oldScore);
       playerGameOver = true;
 	  }
 
